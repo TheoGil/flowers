@@ -5,7 +5,8 @@ import * as EssentialsPlugin from "@tweakpane/plugin-essentials";
 
 import { Flower } from "./Flower";
 import { Vec2 } from "./Vec2";
-import { randomFloat } from "math-toolbox";
+import { randomFloat, degToRad } from "math-toolbox";
+import { Leaf } from "./Leaf";
 
 const PARAMS = {
   debug: true,
@@ -21,6 +22,13 @@ const PARAMS = {
       randY: { min: 25, max: 180 },
     },
   },
+  leaf: {
+    length: 200,
+    width: 100,
+    angle: 0,
+    shapeApex: 1,
+    shapeBase: 0.25,
+  },
 };
 
 class App {
@@ -30,6 +38,7 @@ class App {
 
     this.onResize = this.onResize.bind(this);
     this.resetFlower = this.resetFlower.bind(this);
+    this.resetLeaf = this.resetLeaf.bind(this);
 
     this.canvasEl = document.querySelector("canvas");
     this.ctx = this.canvasEl.getContext("2d");
@@ -38,7 +47,8 @@ class App {
     this.setCanvasSize();
 
     this.initDebug();
-    this.initFlower();
+    // this.initFlower();
+    this.initLeaf();
   }
 
   onResize() {
@@ -54,71 +64,95 @@ class App {
     this.gui = new Pane();
     this.gui.registerPlugin(EssentialsPlugin);
 
-    const flowerFolder = this.gui
+    // const flowerFolder = this.gui
+    //   .addFolder({
+    //     title: "Flower",
+    //   })
+    //   .on("change", this.resetFlower);
+
+    // flowerFolder
+    //   .addButton({
+    //     title: "Reset",
+    //   })
+    //   .on("click", this.resetFlower);
+
+    // ------------------------------
+
+    // const stemFolder = flowerFolder.addFolder({
+    //   title: "Stem",
+    // });
+
+    // const stemToFolder = stemFolder.addFolder({
+    //   title: "To",
+    // });
+
+    // stemToFolder.addInput(PARAMS.stem.to, "randX", {
+    //   min: 0,
+    //   max: 500,
+    //   step: 1,
+    // });
+
+    // stemToFolder.addInput(PARAMS.stem.to, "randY", {
+    //   min: 0,
+    //   max: 500,
+    //   step: 1,
+    // });
+
+    // const stemHandleFolder = stemFolder.addFolder({
+    //   title: "Handle",
+    // });
+
+    // stemHandleFolder.addInput(PARAMS.stem.handle, "randX", {
+    //   min: 0,
+    //   max: 500,
+    //   step: 1,
+    // });
+
+    // stemHandleFolder.addInput(PARAMS.stem.handle, "randY", {
+    //   min: 0,
+    //   max: 500,
+    //   step: 1,
+    // });
+
+    // ------------------------------
+
+    const leafFolder = this.gui
       .addFolder({
-        title: "Flower",
+        title: "Leaf",
       })
-      .on("change", this.resetFlower);
+      .on("change", this.resetLeaf);
 
-    flowerFolder
-      .addButton({
-        title: "Reset",
-      })
-      .on("click", this.resetFlower);
-
-    const stemFolder = flowerFolder.addFolder({
-      title: "Stem",
-    });
-
-    const stemToFolder = stemFolder.addFolder({
-      title: "To",
-    });
-
-    stemToFolder.addInput(PARAMS.stem.to, "randX", {
+    leafFolder.addInput(PARAMS.leaf, "length", {
       min: 0,
       max: 500,
       step: 1,
     });
 
-    stemToFolder.addInput(PARAMS.stem.to, "randY", {
+    leafFolder.addInput(PARAMS.leaf, "width", {
       min: 0,
       max: 500,
       step: 1,
     });
 
-    const stemHandleFolder = stemFolder.addFolder({
-      title: "Handle",
+    leafFolder.addInput(PARAMS.leaf, "shapeApex", {
+      min: 0,
+      max: 1,
+      step: 0.01,
     });
 
-    stemHandleFolder.addInput(PARAMS.stem.handle, "randX", {
+    leafFolder.addInput(PARAMS.leaf, "shapeBase", {
       min: 0,
-      max: 500,
-      step: 1,
+      max: 1,
+      step: 0.01,
     });
 
-    stemHandleFolder.addInput(PARAMS.stem.handle, "randY", {
-      min: 0,
-      max: 500,
-      step: 1,
+    leafFolder.addInput(PARAMS.leaf, "angle", {
+      min: -90,
+      max: 90,
     });
   }
 
   initFlower() {
-    const stemFrom = new Vec2(innerWidth / 2, innerHeight / 2);
-
-    const stemTo = new Vec2(
-      stemFrom.x + randomFloat(-PARAMS.stem.to.randX, PARAMS.stem.to.randX),
-      stemFrom.y -
-        randomFloat(PARAMS.stem.to.randY.min, PARAMS.stem.to.randY.max)
-    );
-
-    const stemHandle = new Vec2(
-      stemFrom.x +
-        randomFloat(-PARAMS.stem.handle.randX, PARAMS.stem.handle.randX),
-      stemFrom.y -
-        randomFloat(PARAMS.stem.handle.randY.min, PARAMS.stem.handle.randY.max)
-    );
-
     if (PARAMS.debug) {
       this.ctx.save();
       this.ctx.translate(stemFrom.x - PARAMS.stem.to.randX, stemFrom.y);
@@ -153,9 +187,27 @@ class App {
     });
   }
 
+  initLeaf() {
+    new Leaf({
+      ctx: this.ctx,
+      x: innerWidth / 2,
+      y: innerHeight / 2,
+      angle: degToRad(PARAMS.leaf.angle),
+      length: PARAMS.leaf.length,
+      width: PARAMS.leaf.width,
+      shapeBase: PARAMS.leaf.shapeBase,
+      shapeApex: PARAMS.leaf.shapeApex,
+    });
+  }
+
   resetFlower() {
     this.ctx.clearRect(0, 0, this.canvasEl.width, this.canvasEl.height);
     this.initFlower();
+  }
+
+  resetLeaf() {
+    this.ctx.clearRect(0, 0, this.canvasEl.width, this.canvasEl.height);
+    this.initLeaf();
   }
 }
 
