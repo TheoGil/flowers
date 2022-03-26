@@ -10,15 +10,29 @@ import { randomFloat } from "math-toolbox";
 const PARAMS = {
   debug: true,
   stem: {
+    from: {
+      position: {
+        x: innerWidth / 2,
+        y: innerHeight / 2,
+      },
+    },
     to: {
-      fillStyle: "rgba(255, 0, 0, 0.1)",
+      fillStyle: "rgba(255, 0, 0, 0.05)",
       randX: 150,
       randY: { min: 100, max: 300 },
+      position: {
+        x: 50,
+        y: -200,
+      },
     },
     handle: {
-      fillStyle: "rgba(0, 255, 0, 0.1)",
+      fillStyle: "rgba(0, 255, 0, 0.05)",
       randX: 40,
       randY: { min: 25, max: 180 },
+      position: {
+        x: 0,
+        y: -150,
+      },
     },
   },
 };
@@ -30,6 +44,7 @@ class App {
 
     this.onResize = this.onResize.bind(this);
     this.resetFlower = this.resetFlower.bind(this);
+    this.randomizeFlower = this.randomizeFlower.bind(this);
 
     this.canvasEl = document.querySelector("canvas");
     this.ctx = this.canvasEl.getContext("2d");
@@ -38,6 +53,7 @@ class App {
     this.setCanvasSize();
 
     this.initDebug();
+    this.randomizeFlower();
     this.initFlower();
   }
 
@@ -54,17 +70,15 @@ class App {
     this.gui = new Pane();
     this.gui.registerPlugin(EssentialsPlugin);
 
-    const flowerFolder = this.gui
-      .addFolder({
-        title: "Flower",
-      })
-      .on("change", this.resetFlower);
+    const flowerFolder = this.gui.addFolder({
+      title: "Flower",
+    });
 
     flowerFolder
       .addButton({
-        title: "Reset",
+        title: "Randomize 🎲",
       })
-      .on("click", this.resetFlower);
+      .on("click", this.randomizeFlower);
 
     const stemFolder = flowerFolder.addFolder({
       title: "Stem",
@@ -73,6 +87,18 @@ class App {
     const stemToFolder = stemFolder.addFolder({
       title: "To",
     });
+
+    stemToFolder
+      .addInput(PARAMS.stem.to, "position", {
+        step: 1,
+        x: { min: -500, max: 500 },
+        y: { min: -500, max: 500 },
+      })
+      .on("change", ({ value }) => {
+        PARAMS.stem.to.position.x = PARAMS.stem.from.position.x + value.x;
+        PARAMS.stem.to.position.y = PARAMS.stem.from.position.y + value.y;
+        this.resetFlower();
+      });
 
     stemToFolder.addInput(PARAMS.stem.to, "randX", {
       min: 0,
@@ -90,6 +116,18 @@ class App {
       title: "Handle",
     });
 
+    stemHandleFolder
+      .addInput(PARAMS.stem.handle, "position", {
+        step: 1,
+        x: { min: -500, max: 500 },
+        y: { min: -500, max: 500 },
+      })
+      .on("change", ({ value }) => {
+        PARAMS.stem.handle.position.x = PARAMS.stem.from.position.x + value.x;
+        PARAMS.stem.handle.position.y = PARAMS.stem.from.position.y + value.y;
+        this.resetFlower();
+      });
+
     stemHandleFolder.addInput(PARAMS.stem.handle, "randX", {
       min: 0,
       max: 500,
@@ -105,20 +143,6 @@ class App {
 
   initFlower() {
     const stemFrom = new Vec2(innerWidth / 2, innerHeight / 2);
-
-    const stemTo = new Vec2(
-      stemFrom.x + randomFloat(-PARAMS.stem.to.randX, PARAMS.stem.to.randX),
-      stemFrom.y -
-        randomFloat(PARAMS.stem.to.randY.min, PARAMS.stem.to.randY.max)
-    );
-
-    const stemHandle = new Vec2(
-      stemFrom.x +
-        randomFloat(-PARAMS.stem.handle.randX, PARAMS.stem.handle.randX),
-      stemFrom.y -
-        randomFloat(PARAMS.stem.handle.randY.min, PARAMS.stem.handle.randY.max)
-    );
-
     if (PARAMS.debug) {
       this.ctx.save();
       this.ctx.translate(stemFrom.x - PARAMS.stem.to.randX, stemFrom.y);
@@ -147,10 +171,28 @@ class App {
       ctx: this.ctx,
       stem: {
         from: stemFrom,
-        to: stemTo,
-        handle: stemHandle,
+        to: PARAMS.stem.to.position,
+        handle: PARAMS.stem.handle.position,
       },
     });
+  }
+
+  randomizeFlower() {
+    const { from, to, handle } = PARAMS.stem;
+
+    PARAMS.stem.to.position.x =
+      from.position.x + randomFloat(-to.randX, to.randX);
+
+    PARAMS.stem.to.position.y =
+      from.position.y - randomFloat(to.randY.min, to.randY.max);
+
+    PARAMS.stem.handle.position.x =
+      from.position.x + randomFloat(-handle.randX, handle.randX);
+
+    PARAMS.stem.handle.position.y =
+      from.position.y - randomFloat(handle.randY.min, handle.randY.max);
+
+    this.resetFlower();
   }
 
   resetFlower() {
