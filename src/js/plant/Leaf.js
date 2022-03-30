@@ -1,6 +1,6 @@
-import { Vec2 } from "./Vec2";
-import crosshair from "./crosshair";
-import { DEBUG_COLOR_LINE } from "./settings";
+import { Vec2 } from "../utils/Vec2";
+import crosshair from "../utils/crosshair";
+import { DEBUG_COLOR_LINE } from "../settings";
 
 export class Leaf {
   strokeStyle = "black";
@@ -68,9 +68,9 @@ export class Leaf {
 
     this.ctx.stroke();
 
-    if (this.debug) {
-      this.renderDebug(lcp1, lcp2, rcp1, rcp2);
-    }
+    // if (this.debug) {
+    //   this.renderDebug(lcp1, lcp2, rcp1, rcp2);
+    // }
 
     this.ctx.restore();
   }
