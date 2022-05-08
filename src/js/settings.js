@@ -38,4 +38,9 @@ export const PARAMS = {
     shapeApex: 1,
     shapeBase: 0.25,
   },
+  flower: {
+    pistilRadius: 5,
+    petalsCount: 15,
+    petalsLength: 10,
+  },
 };

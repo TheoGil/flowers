@@ -3,18 +3,22 @@ import { degToRad } from "math-toolbox";
 
 import crosshair from "../utils/crosshair";
 import { Leaf } from "./Leaf";
+import { Flower } from "./Flower";
 import { PARAMS } from "../settings";
 
 export class Plant {
   strokeStyle = "black";
   leaves = [];
 
-  constructor({ ctx, position, stem, leaves }) {
+  constructor({ ctx, position, stem, leaves, flower }) {
     this.ctx = ctx;
     this.position = position;
 
     this.initStem(stem);
     this.initLeaves(leaves);
+    if (flower) {
+      this.initFlower(flower);
+    }
   }
 
   initStem(stem) {
@@ -47,6 +51,16 @@ export class Plant {
 
         this.leaves.push(leaf);
       }
+    });
+  }
+
+  initFlower(flower) {
+    this.flower = new Flower({
+      ctx: this.ctx,
+      position: this.stem.to,
+      pistilRadius: flower.pistilRadius,
+      petalsCount: flower.petalsCount,
+      petalsLength: flower.petalsLength,
     });
   }
 }

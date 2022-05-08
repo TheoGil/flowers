@@ -3,7 +3,6 @@ import "../css/style.css";
 import { Pane } from "tweakpane";
 import * as EssentialsPlugin from "@tweakpane/plugin-essentials";
 
-// import { Flower } from "./Flower";
 import { Vec2 } from "./utils/Vec2";
 import { randomFloat, degToRad } from "math-toolbox";
 import { Leaf } from "./plant/Leaf";
@@ -16,9 +15,8 @@ class App {
     console.log("🌼 🌻 🌸");
 
     this.onResize = this.onResize.bind(this);
-    this.resetFlower = this.resetFlower.bind(this);
+    this.resetPlant = this.resetPlant.bind(this);
     this.randomizePlant = this.randomizePlant.bind(this);
-    this.resetLeaf = this.resetLeaf.bind(this);
 
     this.canvasEl = document.querySelector("canvas");
     this.ctx = this.canvasEl.getContext("2d");
@@ -29,8 +27,6 @@ class App {
     this.initDebug();
 
     this.randomizePlant();
-
-    // this.initLeaf();
   }
 
   onResize() {
@@ -38,19 +34,20 @@ class App {
   }
 
   setCanvasSize() {
-    this.canvasEl.width = innerWidth;
-    this.canvasEl.height = innerHeight;
+    this.canvasEl.width = innerWidth * devicePixelRatio;
+    this.canvasEl.height = innerHeight * devicePixelRatio;
+    this.ctx.scale(devicePixelRatio, devicePixelRatio);
   }
 
   initDebug() {
     this.gui = new Pane();
     this.gui.registerPlugin(EssentialsPlugin);
 
-    const flowerFolder = this.gui.addFolder({
-      title: "Flower",
+    const plantFolder = this.gui.addFolder({
+      title: "Plant",
     });
 
-    flowerFolder
+    plantFolder
       .addButton({
         title: "Randomize 🎲",
       })
@@ -58,8 +55,9 @@ class App {
 
     // ------------------------------
 
-    const stemFolder = flowerFolder.addFolder({
+    const stemFolder = plantFolder.addFolder({
       title: "Stem",
+      expanded: false,
     });
 
     const stemToFolder = stemFolder.addFolder({
@@ -75,7 +73,7 @@ class App {
       .on("change", ({ value }) => {
         PARAMS.stem.to.position.x = PARAMS.stem.from.position.x + value.x;
         PARAMS.stem.to.position.y = PARAMS.stem.from.position.y + value.y;
-        this.resetFlower();
+        this.resetPlant();
       });
 
     stemToFolder
@@ -107,7 +105,7 @@ class App {
       .on("change", ({ value }) => {
         PARAMS.stem.handle.position.x = PARAMS.stem.from.position.x + value.x;
         PARAMS.stem.handle.position.y = PARAMS.stem.from.position.y + value.y;
-        this.resetFlower();
+        this.resetPlant();
       });
 
     stemHandleFolder
@@ -128,11 +126,12 @@ class App {
 
     // ------------------------------
 
-    const leafFolder = this.gui
+    const leafFolder = plantFolder
       .addFolder({
         title: "Leaf",
+        expanded: false,
       })
-      .on("change", this.resetFlower);
+      .on("change", this.resetPlant);
 
     leafFolder.addInput(PARAMS.leaf, "length", {
       min: 0,
@@ -169,9 +168,43 @@ class App {
         max: 100,
       })
       .on("change", this.randomizePlant);
+
+    const flowerFolder = plantFolder
+      .addFolder({
+        title: "Flower",
+        expanded: false,
+      })
+      .on("change", this.randomizePlant);
+
+    flowerFolder.addInput(PARAMS.flower, "pistilRadius", {
+      min: 0,
+      max: 500,
+      step: 1,
+    });
+
+    flowerFolder.addInput(PARAMS.flower, "petalsCount", {
+      min: 0,
+      max: 20,
+      step: 1,
+    });
+
+    flowerFolder.addInput(PARAMS.flower, "petalsLength", {
+      min: 0,
+      max: 500,
+      step: 1,
+    });
   }
 
   initPlant() {
+    const flower =
+      Math.random() > 0.75
+        ? {
+            pistilRadius: PARAMS.flower.pistilRadius,
+            petalsCount: PARAMS.flower.petalsCount,
+            petalsLength: PARAMS.flower.petalsLength,
+          }
+        : false;
+
     new Plant({
       ctx: this.ctx,
       position: new Vec2(innerWidth / 2, innerHeight / 2),
@@ -182,6 +215,7 @@ class App {
       leaves: {
         lut: PARAMS.leaves.lut,
       },
+      flower,
     });
   }
 
@@ -200,30 +234,18 @@ class App {
     PARAMS.stem.handle.position.y =
       from.position.y - randomFloat(handle.randY.min, handle.randY.max);
 
-    this.resetFlower();
+    PARAMS.flower.pistilRadius = randomFloat(3, 8);
+
+    PARAMS.flower.petalsLength = randomFloat(5, 20);
+
+    PARAMS.flower.petalsCount = randomFloat(10, 20);
+
+    this.resetPlant();
   }
 
-  resetFlower() {
+  resetPlant() {
     this.ctx.clearRect(0, 0, this.canvasEl.width, this.canvasEl.height);
     this.initPlant();
-  }
-
-  initLeaf() {
-    new Leaf({
-      ctx: this.ctx,
-      x: innerWidth / 2,
-      y: innerHeight / 2,
-      angle: degToRad(PARAMS.leaf.angle),
-      length: PARAMS.leaf.length,
-      width: PARAMS.leaf.width,
-      shapeBase: PARAMS.leaf.shapeBase,
-      shapeApex: PARAMS.leaf.shapeApex,
-    });
-  }
-
-  resetLeaf() {
-    this.ctx.clearRect(0, 0, this.canvasEl.width, this.canvasEl.height);
-    this.initLeaf();
   }
 }
 

@@ -1,55 +1,70 @@
-function crosshair({ ctx, x, y, size = 2, strokeStyle = "red" }) {
-  ctx.save();
+import { rotatePoint } from "../utils/rotatePoint";
 
-  ctx.strokeStyle = strokeStyle;
-
-  ctx.beginPath();
-  ctx.moveTo(x - size, y - size);
-  ctx.lineTo(x + size, y + size);
-  ctx.stroke();
-
-  ctx.beginPath();
-  ctx.moveTo(x + size, y - size);
-  ctx.lineTo(x - size, y + size);
-  ctx.stroke();
-
-  ctx.restore();
-}
+const PETALS_LENGTH_RANDOMIZER = 0.025;
 
 export class Flower {
   strokeStyle = "black";
 
-  constructor({ ctx, stem }) {
+  constructor({ ctx, position, pistilRadius, petalsCount, petalsLength }) {
     this.ctx = ctx;
-    this.stem = stem;
+    this.position = position;
+    this.pistilRadius = pistilRadius;
+    this.petalsCount = petalsCount;
+    this.petalsLength = petalsLength;
 
     this.render();
   }
 
   render() {
+    this.ctx.save();
+
     this.ctx.strokeStyle = this.strokeStyle;
 
-    this.ctx.beginPath();
-    this.ctx.moveTo(this.stem.from.x, this.stem.from.y);
-    this.ctx.quadraticCurveTo(
-      this.stem.handle.x,
-      this.stem.handle.y,
-      this.stem.to.x,
-      this.stem.to.y
-    );
-    this.ctx.stroke();
+    this.ctx.translate(this.position.x, this.position.y);
 
-    crosshair({ ctx: this.ctx, x: this.stem.from.x, y: this.stem.from.y });
-    crosshair({ ctx: this.ctx, x: this.stem.handle.x, y: this.stem.handle.y });
-    crosshair({ ctx: this.ctx, x: this.stem.to.x, y: this.stem.to.y });
+    const inc = (Math.PI * 2) / this.petalsCount;
+    for (let angle = 0; angle < Math.PI * 2; angle += inc) {
+      this.ctx.moveTo(0, 0);
+      this.ctx.save();
+      this.ctx.rotate(angle);
 
-    this.ctx.strokeStyle = "rgba(255, 0, 0, 0.5)";
+      const petalLength =
+        this.petalsLength +
+        this.petalsLength *
+          PETALS_LENGTH_RANDOMIZER *
+          (Math.random() > 0.5 ? 1 : -1);
+
+      const halfInc = inc / 2;
+      const bezierShape = 5;
+      const ctrlDistance = -petalLength * bezierShape;
+
+      const from = rotatePoint(0, -petalLength, -halfInc);
+      const ctrl1 = rotatePoint(0, ctrlDistance, -halfInc);
+      const ctrl2 = rotatePoint(0, ctrlDistance, halfInc);
+      const to = rotatePoint(0, -petalLength, halfInc);
+
+      this.ctx.moveTo(0, 0);
+      this.ctx.beginPath();
+      this.ctx.lineTo(from.x, from.y);
+      this.ctx.bezierCurveTo(ctrl1.x, ctrl1.y, ctrl2.x, ctrl2.y, to.x, to.y);
+
+      this.ctx.lineTo(0, 0);
+
+      this.ctx.fillStyle = "white";
+      this.ctx.fill();
+      this.ctx.stroke();
+
+      this.ctx.restore();
+    }
+
     this.ctx.beginPath();
-    this.ctx.setLineDash([5, 15]);
-    this.ctx.moveTo(this.stem.from.x, this.stem.from.y);
-    this.ctx.lineTo(this.stem.handle.x, this.stem.handle.y);
-    this.ctx.lineTo(this.stem.to.x, this.stem.to.y);
+    this.ctx.arc(0, 0, this.pistilRadius, 0, 2 * Math.PI);
     this.ctx.stroke();
-    this.ctx.setLineDash([]);
+    this.ctx.fillStyle = "white";
+    this.ctx.fill();
+
+    this.ctx.restore();
   }
+
+  renderDebug() {}
 }
