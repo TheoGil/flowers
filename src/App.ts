@@ -1,10 +1,15 @@
-import { Plant } from "./Plant";
-import { randomFloat, degToRad } from "math-toolbox";
 import { Pane } from "tweakpane";
+import { Bezier } from "bezier-js";
 
 type Vector2D = {
   x: number;
   y: number;
+};
+
+type BezierPoint = {
+  x: number;
+  y: number;
+  t: number;
 };
 
 type QuadraticBezier = {
@@ -15,7 +20,13 @@ type QuadraticBezier = {
 
 type FlowerParams = {
   ctx: CanvasRenderingContext2D;
+  height: number;
   stem: QuadraticBezier;
+  leaves: {
+    count: number;
+    size: number;
+    sizeTemper: number;
+  };
 };
 
 function drawCrossHair(ctx: CanvasRenderingContext2D, x: number, y: number) {
@@ -32,42 +43,95 @@ function drawCrossHair(ctx: CanvasRenderingContext2D, x: number, y: number) {
   ctx.restore();
 }
 
+const params = {
+  size: 0.1,
+  stemTopXOffset: 0.5,
+  stemCtrlYOffset: 0.2,
+  leavesCount: 10,
+  leavesSize: 0.5,
+  leavesSizeTemper: 1,
+  leavesAngle: 0,
+};
+
 class Flower {
   ctx: CanvasRenderingContext2D;
+  stemBezier: Bezier;
+  height: number;
 
   constructor(params: FlowerParams) {
     this.ctx = params.ctx;
+    this.height = params.height;
+    this.stemBezier = new Bezier(
+      params.stem.from,
+      params.stem.ctrl,
+      params.stem.to
+    );
 
     this.drawStem(params.stem);
+    this.drawLeaves(params.leaves);
   }
 
-  drawStem({ from, to, ctrl }: QuadraticBezier) {
+  drawStem({ from, to, ctrl }: FlowerParams["stem"]) {
     this.ctx.beginPath();
     this.ctx.moveTo(from.x, from.y);
     this.ctx.quadraticCurveTo(ctrl.x, ctrl.y, to.x, to.y);
     this.ctx.stroke();
 
+    // this.ctx.save();
+    // this.ctx.strokeStyle = "rgba(255, 0, 0, 0.5)";
+    // this.ctx.setLineDash([2]);
+    // this.ctx.beginPath();
+    // this.ctx.moveTo(from.x, from.y);
+    // this.ctx.lineTo(ctrl.x, ctrl.y);
+    // this.ctx.lineTo(to.x, to.y);
+    // this.ctx.stroke();
+    // this.ctx.setLineDash([]);
+    // this.ctx.restore();
+    // drawCrossHair(this.ctx, from.x, from.y);
+    // drawCrossHair(this.ctx, to.x, to.y);
+    // drawCrossHair(this.ctx, ctrl.x, ctrl.y);
+  }
+
+  drawLeaves(leavesParams: FlowerParams["leaves"]) {
+    // Bezier.get expects value in range [0, 1].
+    // In order to compute this value without rounding error, we work
+    // with higher value and ultimately divide those to go back to expected range.
+    const base = 100;
+
+    const inc = base / params.leavesCount;
+
+    for (let t = 0; t <= base; t += inc) {
+      this.drawLeave(this.stemBezier.get(t / base), leavesParams, false);
+      this.drawLeave(this.stemBezier.get(t / base), leavesParams, true);
+    }
+  }
+
+  drawLeave(
+    p: BezierPoint,
+    { count, size, sizeTemper }: FlowerParams["leaves"],
+    mirror: boolean
+  ) {
+    // drawCrossHair(this.ctx, p.x, p.y);
+
+    const n = this.stemBezier.normal(p.t);
+    let angle =
+      Math.atan2(n.y, n.x) -
+      params.leavesAngle * (mirror ? -1 : 1) +
+      (mirror ? Math.PI : 0);
+
+    const shape = 1 - Math.pow(Math.abs(p.t * 2 - 1), params.leavesSizeTemper);
+    const length = size * this.height * shape;
+
     this.ctx.save();
-    this.ctx.strokeStyle = "rgba(255, 0, 0, 0.5)";
-    this.ctx.setLineDash([2]);
     this.ctx.beginPath();
-    this.ctx.moveTo(from.x, from.y);
-    this.ctx.lineTo(ctrl.x, ctrl.y);
-    this.ctx.lineTo(to.x, to.y);
+    this.ctx.translate(p.x, p.y);
+    this.ctx.moveTo(0, 0);
+    this.ctx.rotate(angle);
+    this.ctx.lineTo(length, 0);
     this.ctx.stroke();
-    this.ctx.setLineDash([]);
     this.ctx.restore();
-    drawCrossHair(this.ctx, from.x, from.y);
-    drawCrossHair(this.ctx, to.x, to.y);
-    drawCrossHair(this.ctx, ctrl.x, ctrl.y);
   }
 }
-
-const params = {
-  size: 0.1,
-  stemTopXOffset: 0.5,
-  stemCtrlYOffset: 0.2,
-};
 
 export class App {
   canvasEl!: HTMLCanvasElement;
@@ -118,6 +182,35 @@ export class App {
       min: -0.5,
       max: 0.5,
     });
+
+    const leavesFolder = folder.addFolder({
+      title: "leaves",
+    });
+
+    leavesFolder.addInput(params, "leavesCount", {
+      label: "count",
+      min: 0,
+      max: 10,
+      step: 1,
+    });
+
+    leavesFolder.addInput(params, "leavesSize", {
+      label: "length",
+      min: 0,
+      max: 1,
+    });
+
+    leavesFolder.addInput(params, "leavesSizeTemper", {
+      label: "length shaping",
+      min: 0.25,
+      max: 3.5,
+    });
+
+    leavesFolder.addInput(params, "leavesAngle", {
+      label: "angle",
+      min: 0,
+      max: Math.PI,
+    });
   }
 
   initCanvas() {
@@ -147,6 +240,7 @@ export class App {
 
     new Flower({
       ctx: this.ctx,
+      height: height,
       stem: {
         from: {
           x: origin.x,
@@ -160,6 +254,11 @@ export class App {
           x: ctrlX,
           y: ctrlY,
         },
+      },
+      leaves: {
+        count: params.leavesCount,
+        size: params.leavesSize,
+        sizeTemper: params.leavesSizeTemper,
       },
     });
   }
