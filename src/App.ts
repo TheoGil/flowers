@@ -64,7 +64,7 @@ class Flower {
 }
 
 const params = {
-  heightRatio: 0.1,
+  size: 0.1,
   stemTopXOffset: 0.5,
   stemCtrlYOffset: 0.2,
 };
@@ -98,8 +98,8 @@ export class App {
       title: "global",
     });
 
-    globalFolder.addInput(params, "heightRatio", {
-      label: "height",
+    globalFolder.addInput(params, "size", {
+      label: "size",
       min: 0,
       max: 1,
     });
@@ -109,7 +109,7 @@ export class App {
     });
 
     stemFolder.addInput(params, "stemTopXOffset", {
-      label: "aperture",
+      label: "spread",
       min: -0.7,
       max: 0.7,
     });
@@ -133,7 +133,7 @@ export class App {
   drawFlower(origin: Vector2D) {
     this.ctx.clearRect(0, 0, this.canvasEl.width, this.canvasEl.height);
 
-    const height = this.canvasEl.height * params.heightRatio;
+    const height = this.canvasEl.height * params.size;
 
     // Horizontal offset between base and top of stem is relative to its height
     const stemTopXOffset = height * params.stemTopXOffset;
