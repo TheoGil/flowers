@@ -40,8 +40,9 @@ function drawCrossHair(ctx: CanvasRenderingContext2D, x: number, y: number) {
 
 const params = {
   size: 0.5,
-  stemTopXOffset: 0.29,
-  stemCtrlYOffset: 0.5,
+  //
+  stemBend: 0.29,
+  stemCurve: 0.5,
   //
   leavesCount: 10,
   leavesSize: 0.5,
@@ -207,12 +208,12 @@ export class App {
       title: "stem",
     });
 
-    stemFolder.addInput(params, "stemTopXOffset", {
+    stemFolder.addInput(params, "stemBend", {
       label: "bend",
       min: -0.7,
       max: 0.7,
     });
-    stemFolder.addInput(params, "stemCtrlYOffset", {
+    stemFolder.addInput(params, "stemCurve", {
       label: "curve",
       min: -0.5,
       max: 0.5,
@@ -322,12 +323,12 @@ export class App {
     };
 
     // Horizontal offset between base and top of stem is relative to its height
-    const stemTopXOffset = height * params.stemTopXOffset;
-    const stemTopX = origin.x + stemTopXOffset;
+    const stemBend = height * params.stemBend;
+    const stemTopX = origin.x + stemBend;
     const stemTopY = origin.y - height;
 
     // Control point vertical position is relative to stem height
-    const ctrlYOffset = height * params.stemCtrlYOffset;
+    const ctrlYOffset = height * params.stemCurve;
     const ctrlX = origin.x;
     const ctrlY = stemTopY + ctrlYOffset;
 
