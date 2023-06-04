@@ -1,15 +1,11 @@
 import { Pane } from "tweakpane";
 import { Bezier } from "bezier-js";
+import eases from "eases";
+import { map } from "math-toolbox";
 
 type Vector2D = {
   x: number;
   y: number;
-};
-
-type BezierPoint = {
-  x: number;
-  y: number;
-  t: number;
 };
 
 type QuadraticBezier = {
@@ -25,7 +21,6 @@ type FlowerParams = {
   leaves: {
     count: number;
     size: number;
-    sizeTemper: number;
   };
 };
 
@@ -45,16 +40,17 @@ function drawCrossHair(ctx: CanvasRenderingContext2D, x: number, y: number) {
 
 const params = {
   size: 0.5,
-  stemTopXOffset: 0.5,
-  stemCtrlYOffset: 0.2,
+  stemTopXOffset: 0.29,
+  stemCtrlYOffset: 0.5,
   //
   leavesCount: 10,
   leavesSize: 0.5,
-  leavesSizeTemper: 1,
-  leavesAngle: 1.2,
+  leavesAngle: 1.27,
   //
   leavesShape: 0.5,
-  leavesThickness: 0.25,
+  leavesThickness: 0.17,
+  leavesLengthModifier: 0.8,
+  leavesLengthEasing: "quadOut",
 };
 
 class Flower {
@@ -116,7 +112,6 @@ class Flower {
         progress: point.t,
         angle: angle + params.leavesAngle,
         size: leavesParams.size,
-        sizeTemper: leavesParams.sizeTemper,
       });
 
       this.drawLeave({
@@ -124,7 +119,6 @@ class Flower {
         progress: point.t,
         angle: angle + Math.PI - (Math.PI + params.leavesAngle),
         size: leavesParams.size,
-        sizeTemper: leavesParams.sizeTemper,
       });
     }
   }
@@ -134,20 +128,22 @@ class Flower {
     progress,
     angle,
     size,
-    sizeTemper,
   }: {
     position: Vector2D;
     progress: number;
     angle: number;
     size: number;
-    sizeTemper: number;
   }) {
-    // drawCrossHair(this.ctx, p.x, p.y);
+    const remappedProgressMedian = params.leavesLengthModifier;
 
-    // params.leavesAngle * (mirror ? 1 : -1);
+    let remappedProgress = map(progress, 0, remappedProgressMedian, 0, 0.5);
+
+    if (progress >= remappedProgressMedian) {
+      remappedProgress = map(progress, remappedProgressMedian, 1, 0.5, 1);
+    }
 
     const lengthMultiplier =
-      1 - Math.pow(Math.abs(progress * 2 - 1), params.leavesSizeTemper);
+      1 - eases[params.leavesLengthEasing](Math.abs(remappedProgress * 2 - 1));
 
     const length = size * this.height * lengthMultiplier;
 
@@ -229,7 +225,7 @@ export class App {
     leavesArrangement.addInput(params, "leavesCount", {
       label: "count",
       min: 0,
-      max: 10,
+      max: 30,
       step: 1,
     });
 
@@ -237,12 +233,6 @@ export class App {
       label: "length",
       min: 0,
       max: 1,
-    });
-
-    leavesArrangement.addInput(params, "leavesSizeTemper", {
-      label: "length shaping",
-      min: 0.25,
-      max: 3.5,
     });
 
     leavesArrangement.addInput(params, "leavesAngle", {
@@ -265,6 +255,49 @@ export class App {
       label: "thickness",
       min: 0,
       max: 0.5,
+    });
+
+    leavesShape.addInput(params, "leavesLengthModifier", {
+      label: "length mod offset",
+      min: 0,
+      max: 1,
+    });
+
+    leavesShape.addInput(params, "leavesLengthEasing", {
+      label: "length mod easing",
+      options: {
+        backInOut: "backInOut",
+        backIn: "backIn",
+        backOut: "backOut",
+        bounceInOut: "bounceInOut",
+        bounceIn: "bounceIn",
+        bounceOut: "bounceOut",
+        circInOut: "circInOut",
+        circIn: "circIn",
+        circOut: "circOut",
+        cubicInOut: "cubicInOut",
+        cubicIn: "cubicIn",
+        cubicOut: "cubicOut",
+        elasticInOut: "elasticInOut",
+        elasticIn: "elasticIn",
+        elasticOut: "elasticOut",
+        expoInOut: "expoInOut",
+        expoIn: "expoIn",
+        expoOut: "expoOut",
+        linear: "linear",
+        quadInOut: "quadInOut",
+        quadIn: "quadIn",
+        quadOut: "quadOut",
+        quartInOut: "quartInOut",
+        quartIn: "quartIn",
+        quartOut: "quartOut",
+        quintInOut: "quintInOut",
+        quintIn: "quintIn",
+        quintOut: "quintOut",
+        sineInOut: "sineInOut",
+        sineIn: "sineIn",
+        sineOut: "sineOut",
+      },
     });
   }
 
@@ -318,7 +351,6 @@ export class App {
       leaves: {
         count: params.leavesCount,
         size: params.leavesSize,
-        sizeTemper: params.leavesSizeTemper,
       },
     });
   }
