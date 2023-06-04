@@ -44,13 +44,17 @@ function drawCrossHair(ctx: CanvasRenderingContext2D, x: number, y: number) {
 }
 
 const params = {
-  size: 0.1,
+  size: 0.5,
   stemTopXOffset: 0.5,
   stemCtrlYOffset: 0.2,
+  //
   leavesCount: 10,
   leavesSize: 0.5,
   leavesSizeTemper: 1,
-  leavesAngle: 0,
+  leavesAngle: 1.2,
+  //
+  leavesShape: 0.5,
+  leavesThickness: 0.25,
 };
 
 class Flower {
@@ -101,34 +105,75 @@ class Flower {
     const inc = base / params.leavesCount;
 
     for (let t = 0; t <= base; t += inc) {
-      this.drawLeave(this.stemBezier.get(t / base), leavesParams, false);
-      this.drawLeave(this.stemBezier.get(t / base), leavesParams, true);
+      const point = this.stemBezier.get(t / base);
+      const normal = this.stemBezier.normal(point.t);
+      const angle = Math.atan2(normal.y, normal.x);
+
+      // this.drawLeave(point, leavesParams, false);
+      // this.drawLeave(point, leavesParams, true);
+      this.drawLeave({
+        position: { x: point.x, y: point.y },
+        progress: point.t,
+        angle: angle + params.leavesAngle,
+        size: leavesParams.size,
+        sizeTemper: leavesParams.sizeTemper,
+      });
+
+      this.drawLeave({
+        position: { x: point.x, y: point.y },
+        progress: point.t,
+        angle: angle + Math.PI - (Math.PI + params.leavesAngle),
+        size: leavesParams.size,
+        sizeTemper: leavesParams.sizeTemper,
+      });
     }
   }
 
-  drawLeave(
-    p: BezierPoint,
-    { count, size, sizeTemper }: FlowerParams["leaves"],
-    mirror: boolean
-  ) {
+  drawLeave({
+    position,
+    progress,
+    angle,
+    size,
+    sizeTemper,
+  }: {
+    position: Vector2D;
+    progress: number;
+    angle: number;
+    size: number;
+    sizeTemper: number;
+  }) {
     // drawCrossHair(this.ctx, p.x, p.y);
 
-    const n = this.stemBezier.normal(p.t);
-    let angle =
-      Math.atan2(n.y, n.x) -
-      params.leavesAngle * (mirror ? -1 : 1) +
-      (mirror ? Math.PI : 0);
+    // params.leavesAngle * (mirror ? 1 : -1);
 
-    const shape = 1 - Math.pow(Math.abs(p.t * 2 - 1), params.leavesSizeTemper);
-    const length = size * this.height * shape;
+    const lengthMultiplier =
+      1 - Math.pow(Math.abs(progress * 2 - 1), params.leavesSizeTemper);
+
+    const length = size * this.height * lengthMultiplier;
+
+    const thickness = this.height * params.leavesThickness * lengthMultiplier;
 
     this.ctx.save();
-    this.ctx.beginPath();
-    this.ctx.translate(p.x, p.y);
-    this.ctx.moveTo(0, 0);
+    this.ctx.translate(position.x, position.y);
     this.ctx.rotate(angle);
-    this.ctx.lineTo(length, 0);
+
+    this.ctx.beginPath();
+    this.ctx.moveTo(0, 0);
+
+    const ctrl1 = {
+      x: -thickness / 2,
+      y: -length * params.leavesShape,
+    };
+    this.ctx.quadraticCurveTo(ctrl1.x, ctrl1.y, 0, -length);
+
+    const ctrl2 = {
+      x: thickness / 2,
+      y: -length * params.leavesShape,
+    };
+    this.ctx.quadraticCurveTo(ctrl2.x, ctrl2.y, 0, 0);
+
     this.ctx.stroke();
+
     this.ctx.restore();
   }
 }
@@ -142,20 +187,14 @@ export class App {
     this.initCanvas();
     this.setCanvasSize();
 
-    this.drawFlower({
-      x: this.canvasEl.width / 2,
-      y: this.canvasEl.height / 2,
-    });
+    this.drawFlower();
 
     const folder = this.pane
       .addFolder({
         title: "params",
       })
       .on("change", () => {
-        this.drawFlower({
-          x: this.canvasEl.width / 2,
-          y: this.canvasEl.height / 2,
-        });
+        this.drawFlower();
       });
 
     const globalFolder = folder.addFolder({
@@ -183,33 +222,49 @@ export class App {
       max: 0.5,
     });
 
-    const leavesFolder = folder.addFolder({
-      title: "leaves",
+    const leavesArrangement = folder.addFolder({
+      title: "leaves arrangement",
     });
 
-    leavesFolder.addInput(params, "leavesCount", {
+    leavesArrangement.addInput(params, "leavesCount", {
       label: "count",
       min: 0,
       max: 10,
       step: 1,
     });
 
-    leavesFolder.addInput(params, "leavesSize", {
+    leavesArrangement.addInput(params, "leavesSize", {
       label: "length",
       min: 0,
       max: 1,
     });
 
-    leavesFolder.addInput(params, "leavesSizeTemper", {
+    leavesArrangement.addInput(params, "leavesSizeTemper", {
       label: "length shaping",
       min: 0.25,
       max: 3.5,
     });
 
-    leavesFolder.addInput(params, "leavesAngle", {
+    leavesArrangement.addInput(params, "leavesAngle", {
       label: "angle",
+      min: 0.75,
+      max: 2.39,
+    });
+
+    const leavesShape = folder.addFolder({
+      title: "leaves shape",
+    });
+
+    leavesShape.addInput(params, "leavesShape", {
+      label: "shape",
       min: 0,
-      max: Math.PI,
+      max: 1,
+    });
+
+    leavesShape.addInput(params, "leavesThickness", {
+      label: "thickness",
+      min: 0,
+      max: 0.5,
     });
   }
 
@@ -223,10 +278,15 @@ export class App {
     this.canvasEl.height = window.innerHeight;
   }
 
-  drawFlower(origin: Vector2D) {
+  drawFlower() {
     this.ctx.clearRect(0, 0, this.canvasEl.width, this.canvasEl.height);
 
     const height = this.canvasEl.height * params.size;
+
+    const origin = {
+      x: window.innerWidth / 2,
+      y: window.innerHeight / 2 + height / 2,
+    };
 
     // Horizontal offset between base and top of stem is relative to its height
     const stemTopXOffset = height * params.stemTopXOffset;
