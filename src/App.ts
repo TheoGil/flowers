@@ -14,13 +14,27 @@ type QuadraticBezier = {
   ctrl: Vector2D;
 };
 
+type NodeType = "branches" | "leaves";
+
+type NodeParams = {
+  position: Vector2D;
+  progress: number;
+  angle: number;
+  size: number;
+};
+
+interface LeaveParams extends NodeParams {
+  thickness: number;
+}
+
 type FlowerParams = {
   ctx: CanvasRenderingContext2D;
   height: number;
   stem: QuadraticBezier;
-  leaves: {
+  nodes: {
     count: number;
     size: number;
+    type: NodeType;
   };
 };
 
@@ -41,17 +55,19 @@ function drawCrossHair(ctx: CanvasRenderingContext2D, x: number, y: number) {
 const params = {
   size: 0.5,
   //
-  stemBend: 0.29,
+  stemBend: 0,
   stemCurve: 0.5,
   //
-  leavesCount: 10,
-  leavesSize: 0.5,
-  leavesAngle: 1.27,
+  nodesCount: 10,
+  nodesSize: 0.5,
+  nodesAngle: 1.27,
+  nodesLengthModPos: 0.8,
+  nodesLengthEase: "quadOut",
+  nodesType: "leaves",
   //
   leavesShape: 0.5,
   leavesThickness: 0.17,
-  leavesLengthModifier: 0.8,
-  leavesLengthEasing: "quadOut",
+  //
 };
 
 class Flower {
@@ -69,7 +85,7 @@ class Flower {
     );
 
     this.drawStem(params.stem);
-    this.drawLeaves(params.leaves);
+    this.drawNodes(params.nodes);
   }
 
   drawStem({ from, to, ctrl }: FlowerParams["stem"]) {
@@ -93,63 +109,54 @@ class Flower {
     // drawCrossHair(this.ctx, ctrl.x, ctrl.y);
   }
 
-  drawLeaves(leavesParams: FlowerParams["leaves"]) {
+  drawNodes(nodes: FlowerParams["nodes"]) {
     // Bezier.get expects value in range [0, 1].
     // In order to compute this value without rounding error, we work
     // with higher value and ultimately divide those to go back to expected range.
     const base = 100;
 
-    const inc = base / params.leavesCount;
+    const inc = base / params.nodesCount;
 
     for (let t = 0; t <= base; t += inc) {
       const point = this.stemBezier.get(t / base);
       const normal = this.stemBezier.normal(point.t);
       const angle = Math.atan2(normal.y, normal.x);
+      const lengthMultiplier = this.computeNodeLengthMultiplier(point.t);
+      const size = nodes.size * this.height * lengthMultiplier;
 
-      // this.drawLeave(point, leavesParams, false);
-      // this.drawLeave(point, leavesParams, true);
-      this.drawLeave({
+      const nodeParams: NodeParams = {
         position: { x: point.x, y: point.y },
         progress: point.t,
-        angle: angle + params.leavesAngle,
-        size: leavesParams.size,
-      });
+        angle: angle + params.nodesAngle,
+        size: size,
+      };
 
-      this.drawLeave({
-        position: { x: point.x, y: point.y },
-        progress: point.t,
-        angle: angle + Math.PI - (Math.PI + params.leavesAngle),
-        size: leavesParams.size,
-      });
+      switch (nodes.type) {
+        case "branches":
+          break;
+        case "leaves":
+          const thickness =
+            this.height * params.leavesThickness * lengthMultiplier;
+
+          // Draw right side leave
+          this.drawLeave({
+            ...nodeParams,
+            thickness,
+          });
+
+          // Drawn left side leave
+          this.drawLeave({
+            ...nodeParams,
+            angle: angle + Math.PI - (Math.PI + params.nodesAngle),
+            thickness: thickness,
+          });
+
+          break;
+      }
     }
   }
 
-  drawLeave({
-    position,
-    progress,
-    angle,
-    size,
-  }: {
-    position: Vector2D;
-    progress: number;
-    angle: number;
-    size: number;
-  }) {
-    const remappedProgressMedian = params.leavesLengthModifier;
-
-    let remappedProgress = map(progress, 0, remappedProgressMedian, 0, 0.5);
-
-    if (progress >= remappedProgressMedian) {
-      remappedProgress = map(progress, remappedProgressMedian, 1, 0.5, 1);
-    }
-
-    const lengthMultiplier =
-      1 - eases[params.leavesLengthEasing](Math.abs(remappedProgress * 2 - 1));
-
-    const length = size * this.height * lengthMultiplier;
-
-    const thickness = this.height * params.leavesThickness * lengthMultiplier;
-
+  drawLeave({ position, angle, size, thickness }: LeaveParams) {
     this.ctx.save();
     this.ctx.translate(position.x, position.y);
     this.ctx.rotate(angle);
@@ -159,19 +166,33 @@ class Flower {
 
     const ctrl1 = {
       x: -thickness / 2,
-      y: -length * params.leavesShape,
+      y: -size * params.leavesShape,
     };
-    this.ctx.quadraticCurveTo(ctrl1.x, ctrl1.y, 0, -length);
+    this.ctx.quadraticCurveTo(ctrl1.x, ctrl1.y, 0, -size);
 
     const ctrl2 = {
       x: thickness / 2,
-      y: -length * params.leavesShape,
+      y: -size * params.leavesShape,
     };
     this.ctx.quadraticCurveTo(ctrl2.x, ctrl2.y, 0, 0);
 
     this.ctx.stroke();
 
     this.ctx.restore();
+  }
+
+  computeNodeLengthMultiplier(progress: number) {
+    const remappedProgressMedian = params.nodesLengthModPos;
+
+    let remappedProgress = map(progress, 0, remappedProgressMedian, 0, 0.5);
+
+    if (progress >= remappedProgressMedian) {
+      remappedProgress = map(progress, remappedProgressMedian, 1, 0.5, 1);
+    }
+
+    return (
+      1 - eases[params.nodesLengthEase](Math.abs(remappedProgress * 2 - 1))
+    );
   }
 }
 
@@ -219,53 +240,45 @@ export class App {
       max: 0.5,
     });
 
-    const leavesArrangement = folder.addFolder({
-      title: "leaves arrangement",
+    const nodesFolder = folder.addFolder({
+      title: "nodes",
     });
 
-    leavesArrangement.addInput(params, "leavesCount", {
+    nodesFolder.addInput(params, "nodesType", {
+      label: "types",
+      options: {
+        leaves: "leaves",
+        branches: "branches",
+      },
+    });
+
+    nodesFolder.addInput(params, "nodesCount", {
       label: "count",
       min: 0,
       max: 30,
       step: 1,
     });
 
-    leavesArrangement.addInput(params, "leavesSize", {
+    nodesFolder.addInput(params, "nodesSize", {
       label: "length",
       min: 0,
       max: 1,
     });
 
-    leavesArrangement.addInput(params, "leavesAngle", {
+    nodesFolder.addInput(params, "nodesAngle", {
       label: "angle",
       min: 0.75,
       max: 2.39,
     });
 
-    const leavesShape = folder.addFolder({
-      title: "leaves shape",
-    });
-
-    leavesShape.addInput(params, "leavesShape", {
-      label: "shape",
+    nodesFolder.addInput(params, "nodesLengthModPos", {
+      label: "length mod pos",
       min: 0,
       max: 1,
     });
 
-    leavesShape.addInput(params, "leavesThickness", {
-      label: "thickness",
-      min: 0,
-      max: 0.5,
-    });
-
-    leavesShape.addInput(params, "leavesLengthModifier", {
-      label: "length mod offset",
-      min: 0,
-      max: 1,
-    });
-
-    leavesShape.addInput(params, "leavesLengthEasing", {
-      label: "length mod easing",
+    nodesFolder.addInput(params, "nodesLengthEase", {
+      label: "length mod ease",
       options: {
         backInOut: "backInOut",
         backIn: "backIn",
@@ -299,6 +312,22 @@ export class App {
         sineIn: "sineIn",
         sineOut: "sineOut",
       },
+    });
+
+    const leavesShape = folder.addFolder({
+      title: "leaves shape",
+    });
+
+    leavesShape.addInput(params, "leavesShape", {
+      label: "shape",
+      min: 0,
+      max: 1,
+    });
+
+    leavesShape.addInput(params, "leavesThickness", {
+      label: "thickness",
+      min: 0,
+      max: 0.5,
     });
   }
 
@@ -349,9 +378,10 @@ export class App {
           y: ctrlY,
         },
       },
-      leaves: {
-        count: params.leavesCount,
-        size: params.leavesSize,
+      nodes: {
+        type: params.nodesType,
+        count: params.nodesCount,
+        size: params.nodesSize,
       },
     });
   }
