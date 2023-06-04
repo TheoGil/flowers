@@ -212,7 +212,7 @@ export class App {
     });
 
     stemFolder.addInput(params, "stemTopXOffset", {
-      label: "spread",
+      label: "bend",
       min: -0.7,
       max: 0.7,
     });
