@@ -27,6 +27,10 @@ interface LeaveParams extends NodeParams {
   thickness: number;
 }
 
+interface BanchParams extends NodeParams {
+  side: "left" | "right";
+}
+
 type FlowerParams = {
   ctx: CanvasRenderingContext2D;
   height: number;
@@ -60,14 +64,13 @@ const params = {
   //
   nodesCount: 10,
   nodesSize: 0.5,
-  nodesAngle: 1.27,
+  nodesAngle: Math.PI / 2,
   nodesLengthModPos: 0.8,
   nodesLengthEase: "quadOut",
-  nodesType: "leaves",
+  nodesType: "branches",
   //
   leavesShape: 0.5,
   leavesThickness: 0.17,
-  //
 };
 
 class Flower {
@@ -120,7 +123,7 @@ class Flower {
     for (let t = 0; t <= base; t += inc) {
       const point = this.stemBezier.get(t / base);
       const normal = this.stemBezier.normal(point.t);
-      const angle = Math.atan2(normal.y, normal.x);
+      const angle = Math.atan2(normal.y, normal.x) - Math.PI / 2;
       const lengthMultiplier = this.computeNodeLengthMultiplier(point.t);
       const size = nodes.size * this.height * lengthMultiplier;
 
@@ -133,18 +136,31 @@ class Flower {
 
       switch (nodes.type) {
         case "branches":
+          // Draw left side branch
+          this.drawBranch({
+            ...nodeParams,
+            side: "left",
+          });
+
+          // Drawn right side branch
+          this.drawBranch({
+            ...nodeParams,
+            // angle: angle + Math.PI - (Math.PI + params.nodesAngle),
+            side: "right",
+          });
+
           break;
         case "leaves":
           const thickness =
             this.height * params.leavesThickness * lengthMultiplier;
 
-          // Draw right side leave
+          // Draw left side leave
           this.drawLeave({
             ...nodeParams,
             thickness,
           });
 
-          // Drawn left side leave
+          // Drawn right side leave
           this.drawLeave({
             ...nodeParams,
             angle: angle + Math.PI - (Math.PI + params.nodesAngle),
@@ -165,16 +181,33 @@ class Flower {
     this.ctx.moveTo(0, 0);
 
     const ctrl1 = {
-      x: -thickness / 2,
-      y: -size * params.leavesShape,
+      x: -size * params.leavesShape,
+      y: thickness / 2,
     };
-    this.ctx.quadraticCurveTo(ctrl1.x, ctrl1.y, 0, -size);
+    this.ctx.quadraticCurveTo(ctrl1.x, ctrl1.y, -size, 0);
 
     const ctrl2 = {
-      x: thickness / 2,
-      y: -size * params.leavesShape,
+      x: -size * params.leavesShape,
+      y: -thickness / 2,
     };
     this.ctx.quadraticCurveTo(ctrl2.x, ctrl2.y, 0, 0);
+
+    this.ctx.stroke();
+
+    this.ctx.restore();
+  }
+
+  drawBranch({ position, angle, size, side }: BanchParams) {
+    this.ctx.save();
+    this.ctx.translate(position.x, position.y);
+    this.ctx.rotate(angle);
+
+    this.ctx.beginPath();
+    this.ctx.moveTo(0, 0);
+
+    const x = side === "left" ? -size : size;
+
+    this.ctx.quadraticCurveTo(x, 0, x, -size);
 
     this.ctx.stroke();
 
