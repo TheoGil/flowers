@@ -71,7 +71,18 @@ const params = {
   //
   leavesShape: 0.5,
   leavesThickness: 0.17,
+  //
+  petalsCount: 6,
+  petalsSize: 0.1,
+  petalsShape: 0.5,
 };
+
+function rotate2D({ x, y }: Vector2D, angle: number): Vector2D {
+  return {
+    x: x * Math.cos(angle) - y * Math.sin(angle),
+    y: x * Math.sin(angle) + y * Math.cos(angle),
+  };
+}
 
 class Flower {
   ctx: CanvasRenderingContext2D;
@@ -87,8 +98,9 @@ class Flower {
       params.stem.to
     );
 
-    this.drawStem(params.stem);
-    this.drawNodes(params.nodes);
+    // this.drawStem(params.stem);
+    // this.drawNodes(params.nodes);
+    this.drawFlower();
   }
 
   drawStem({ from, to, ctrl }: FlowerParams["stem"]) {
@@ -211,6 +223,77 @@ class Flower {
 
     this.ctx.stroke();
 
+    this.ctx.restore();
+  }
+
+  drawFlower() {
+    // --------------- V1 ------------------------
+    // const inc = (Math.PI * 2) / params.petalsCount;
+    // this.ctx.save();
+    // this.ctx.translate(window.innerWidth / 2, window.innerHeight / 2);
+    // for (let i = 0; i < params.petalsCount; i++) {
+    //   const length = 100;
+
+    //   const point = { x: -length, y: 0 };
+    //   const rotated = rotate2D(point, i * inc);
+    //   const rotated1 = rotate2D(point, i * inc + inc);
+    //   const head = rotate2D(
+    //     {
+    //       x: -length * 2,
+    //       y: 0,
+    //     },
+    //     inc * i + inc / 2
+    //   );
+
+    //   this.ctx.beginPath();
+    //   this.ctx.moveTo(0, 0);
+    //   this.ctx.quadraticCurveTo(rotated.x, rotated.y, head.x, head.y);
+    //   this.ctx.quadraticCurveTo(rotated1.x, rotated1.y, 0, 0);
+    //   this.ctx.stroke();
+
+    //   drawCrossHair(this.ctx, 0, 0);
+    //   drawCrossHair(this.ctx, rotated.x, rotated.y);
+    //   drawCrossHair(this.ctx, rotated1.x, rotated1.y);
+    //   drawCrossHair(this.ctx, head.x, head.y);
+    // }
+    // this.ctx.restore();
+
+    // this.ctx.save();
+    // this.ctx.translate(window.innerWidth / 2, window.innerHeight / 2);
+    // this.ctx.beginPath();
+    // this.ctx.arc(0, 0, 50, 0, 2 * Math.PI);
+    // this.ctx.fillStyle = "white";
+    // this.ctx.stroke();
+    // this.ctx.restore();
+
+    // --------------- V2 ------------------------
+    const inc = (Math.PI * 2) / params.petalsCount;
+    const size = this.height * params.petalsSize;
+    const base = size * params.petalsShape;
+
+    this.ctx.save();
+    this.ctx.translate(window.innerWidth / 2, window.innerHeight / 2);
+    for (let i = 0; i < params.petalsCount; i++) {
+      const angle = i * inc;
+
+      const baseA = rotate2D({ x: -base, y: 0 }, angle);
+      const baseB = rotate2D({ x: -base, y: 0 }, angle + inc);
+      const ctrl1 = rotate2D({ x: -size, y: 0 }, angle);
+      const ctrl2 = rotate2D({ x: -size, y: 0 }, angle + inc);
+      const head = rotate2D({ x: -size, y: 0 }, angle + inc / 2);
+
+      this.ctx.beginPath();
+      this.ctx.moveTo(0, 0);
+      this.ctx.lineTo(baseA.x, baseA.y);
+      this.ctx.quadraticCurveTo(ctrl1.x, ctrl1.y, head.x, head.y);
+      this.ctx.quadraticCurveTo(ctrl2.x, ctrl2.y, baseB.x, baseB.y);
+      this.ctx.lineTo(0, 0);
+      this.ctx.stroke();
+
+      drawCrossHair(this.ctx, head.x, head.y);
+      drawCrossHair(this.ctx, ctrl1.x, ctrl1.y);
+      drawCrossHair(this.ctx, ctrl2.x, ctrl2.y);
+    }
     this.ctx.restore();
   }
 
@@ -361,6 +444,29 @@ export class App {
       label: "thickness",
       min: 0,
       max: 0.5,
+    });
+
+    const petalsFolder = folder.addFolder({
+      title: "petals",
+    });
+
+    petalsFolder.addInput(params, "petalsCount", {
+      label: "count",
+      min: 2,
+      max: 20,
+      step: 1,
+    });
+
+    petalsFolder.addInput(params, "petalsSize", {
+      label: "size",
+      min: 0,
+      max: 1,
+    });
+
+    petalsFolder.addInput(params, "petalsShape", {
+      label: "shape",
+      min: 0,
+      max: 1,
     });
   }
 
