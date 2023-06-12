@@ -1,7 +1,7 @@
 import { Pane } from "tweakpane";
 import { Bezier } from "bezier-js";
-import eases from "eases";
 import { map } from "math-toolbox";
+import eases from "eases";
 
 type Vector2D = {
   x: number;
@@ -37,7 +37,6 @@ type FlowerParams = {
   stem: QuadraticBezier;
   nodes: {
     count: number;
-    size: number;
     type: NodeType;
   };
 };
@@ -59,22 +58,24 @@ function drawCrossHair(ctx: CanvasRenderingContext2D, x: number, y: number) {
 const params = {
   size: 0.5,
   //
-  stemBend: 0.21,
-  stemCurve: 0.3,
+  stemBend: -0.26,
+  stemCurve: 0.29,
   //
-  nodesCount: 10,
-  nodesSize: 0.5,
-  nodesAngle: Math.PI / 2,
-  nodesLengthModPos: 0.8,
-  nodesLengthEase: "quadOut",
   nodesType: "leaves",
+  subdivisions: 7,
+  nodesSize: 0.25,
+  nodesSizeEase: "quadIn",
+  nodesSizeModPos: 1,
+  nodesProgressFrom: 0.17,
+  nodesProgressTo: 0.74,
+  nodesAngle: 1.972,
   //
   leavesShape: 0.5,
-  leavesThickness: 0.17,
+  leavesThickness: 0.14,
   //
-  petalsCount: 15,
-  petalsSize: 0.26,
-  petalsShape: 0.27,
+  petalsCount: 9,
+  petalsSize: 0.16,
+  petalsShape: 0.21,
 };
 
 function rotate2D({ x, y }: Vector2D, angle: number): Vector2D {
@@ -82,6 +83,20 @@ function rotate2D({ x, y }: Vector2D, angle: number): Vector2D {
     x: x * Math.cos(angle) - y * Math.sin(angle),
     y: x * Math.sin(angle) + y * Math.cos(angle),
   };
+}
+
+const MIN_SIZE_MULT = 0.1;
+
+function computeNodeSizeMultiplier(p: number) {
+  if (p < params.nodesSizeModPos) {
+    return eases[params.nodesSizeEase](
+      map(p, 0, params.nodesSizeModPos, MIN_SIZE_MULT, 1)
+    );
+  }
+
+  return eases[params.nodesSizeEase](
+    map(p, params.nodesSizeModPos, 1, 1, MIN_SIZE_MULT)
+  );
 }
 
 class Flower {
@@ -125,62 +140,86 @@ class Flower {
   }
 
   drawNodes(nodes: FlowerParams["nodes"]) {
-    // Bezier.get expects value in range [0, 1].
-    // In order to compute this value without rounding error, we work
-    // with higher value and ultimately divide those to go back to expected range.
-    const base = 100;
+    if (params.subdivisions === 1) {
+      this.drawNode({
+        p: params.nodesProgressFrom,
+        sizeMultiplier: 1,
+        type: nodes.type,
+      });
+    } else if (params.subdivisions > 1) {
+      const inc = 1 / params.subdivisions;
 
-    const inc = base / params.nodesCount;
+      const from = params.nodesProgressFrom;
+      const to = params.nodesProgressTo;
 
-    for (let t = 0; t <= base; t += inc) {
-      const point = this.stemBezier.get(t / base);
-      const normal = this.stemBezier.normal(point.t);
-      const angle = Math.atan2(normal.y, normal.x) - Math.PI / 2;
-      const lengthMultiplier = this.computeNodeLengthMultiplier(point.t);
-      const size = nodes.size * this.height * lengthMultiplier;
+      for (let progress = 0; progress <= 1; progress += inc) {
+        const sizeMultiplier = computeNodeSizeMultiplier(progress);
 
-      const nodeParams: NodeParams = {
-        position: { x: point.x, y: point.y },
-        progress: point.t,
-        angle: angle + params.nodesAngle,
-        size: size,
-      };
-
-      switch (nodes.type) {
-        case "branches":
-          // Draw left side branch
-          this.drawBranch({
-            ...nodeParams,
-            side: "left",
-          });
-
-          // Drawn right side branch
-          this.drawBranch({
-            ...nodeParams,
-            // angle: angle + Math.PI - (Math.PI + params.nodesAngle),
-            side: "right",
-          });
-
-          break;
-        case "leaves":
-          const thickness =
-            this.height * params.leavesThickness * lengthMultiplier;
-
-          // Draw left side leave
-          this.drawLeave({
-            ...nodeParams,
-            thickness,
-          });
-
-          // Drawn right side leave
-          this.drawLeave({
-            ...nodeParams,
-            angle: angle + Math.PI - (Math.PI + params.nodesAngle),
-            thickness: thickness,
-          });
-
-          break;
+        this.drawNode({
+          p: map(progress, 0, 1, from, to),
+          sizeMultiplier,
+          type: nodes.type,
+        });
       }
+    }
+  }
+
+  drawNode({
+    p,
+    type,
+    sizeMultiplier,
+  }: {
+    p: number;
+    type: NodeType;
+    sizeMultiplier: number;
+  }) {
+    const { x, y } = this.stemBezier.get(p);
+
+    const normal = this.stemBezier.normal(p);
+    const angle = Math.atan2(normal.y, normal.x) - Math.PI / 2;
+
+    const size = sizeMultiplier * params.nodesSize * this.height;
+
+    const nodeParams: NodeParams = {
+      position: { x, y },
+      progress: p,
+      angle: angle + params.nodesAngle,
+      size: size,
+    };
+
+    switch (type) {
+      case "branches":
+        // Draw left side branch
+        this.drawBranch({
+          ...nodeParams,
+          side: "left",
+        });
+
+        // Drawn right side branch
+        this.drawBranch({
+          ...nodeParams,
+          // angle: angle + Math.PI - (Math.PI + params.nodesAngle),
+          side: "right",
+        });
+
+        break;
+      case "leaves":
+        const thickness = this.height * params.leavesThickness * sizeMultiplier;
+
+        // Draw left side leave
+        this.drawLeave({
+          ...nodeParams,
+          thickness,
+        });
+
+        // Drawn right side leave
+        this.drawLeave({
+          ...nodeParams,
+          angle: angle + Math.PI - (Math.PI + params.nodesAngle),
+          thickness: thickness,
+        });
+
+        break;
     }
   }
 
@@ -261,20 +300,6 @@ class Flower {
 
     this.ctx.restore();
   }
-
-  computeNodeLengthMultiplier(progress: number) {
-    const remappedProgressMedian = params.nodesLengthModPos;
-
-    let remappedProgress = map(progress, 0, remappedProgressMedian, 0, 0.5);
-
-    if (progress >= remappedProgressMedian) {
-      remappedProgress = map(progress, remappedProgressMedian, 1, 0.5, 1);
-    }
-
-    return (
-      1 - eases[params.nodesLengthEase](Math.abs(remappedProgress * 2 - 1))
-    );
-  }
 }
 
 export class App {
@@ -333,15 +358,21 @@ export class App {
       },
     });
 
-    nodesFolder.addInput(params, "nodesCount", {
-      label: "count",
+    nodesFolder.addInput(params, "subdivisions", {
+      label: "subdivisions",
       min: 0,
       max: 30,
       step: 1,
     });
 
-    nodesFolder.addInput(params, "nodesSize", {
-      label: "length",
+    nodesFolder.addInput(params, "nodesProgressFrom", {
+      label: "from",
+      min: 0,
+      max: 1,
+    });
+
+    nodesFolder.addInput(params, "nodesProgressTo", {
+      label: "to",
       min: 0,
       max: 1,
     });
@@ -352,30 +383,21 @@ export class App {
       max: 2.39,
     });
 
-    nodesFolder.addInput(params, "nodesLengthModPos", {
-      label: "length mod pos",
+    nodesFolder.addInput(params, "nodesSize", {
+      label: "size",
       min: 0,
       max: 1,
     });
 
-    nodesFolder.addInput(params, "nodesLengthEase", {
-      label: "length mod ease",
+    nodesFolder.addInput(params, "nodesSizeEase", {
+      label: "length mod easing",
       options: {
-        backInOut: "backInOut",
-        backIn: "backIn",
-        backOut: "backOut",
-        bounceInOut: "bounceInOut",
-        bounceIn: "bounceIn",
-        bounceOut: "bounceOut",
         circInOut: "circInOut",
         circIn: "circIn",
         circOut: "circOut",
         cubicInOut: "cubicInOut",
         cubicIn: "cubicIn",
         cubicOut: "cubicOut",
-        elasticInOut: "elasticInOut",
-        elasticIn: "elasticIn",
-        elasticOut: "elasticOut",
         expoInOut: "expoInOut",
         expoIn: "expoIn",
         expoOut: "expoOut",
@@ -393,6 +415,12 @@ export class App {
         sineIn: "sineIn",
         sineOut: "sineOut",
       },
+    });
+
+    nodesFolder.addInput(params, "nodesSizeModPos", {
+      label: "size mod pos",
+      min: 0,
+      max: 1,
     });
 
     const leavesShape = folder.addFolder({
@@ -484,8 +512,7 @@ export class App {
       },
       nodes: {
         type: params.nodesType,
-        count: params.nodesCount,
-        size: params.nodesSize,
+        count: params.subdivisions,
       },
     });
   }
