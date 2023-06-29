@@ -2,6 +2,10 @@ import { Pane } from "tweakpane";
 import { Bezier } from "bezier-js";
 import { map } from "math-toolbox";
 import eases from "eases";
+import palettes from "nice-color-palettes";
+
+const randomArrayEntry = (array: any[]) =>
+  array[Math.floor(Math.random() * array.length)];
 
 type Vector2D = {
   x: number;
@@ -112,6 +116,7 @@ class Flower {
       params.stem.ctrl,
       params.stem.to
     );
+    this.palette = params.palette;
 
     this.drawStem(params.stem);
     this.drawNodes(params.nodes);
@@ -119,6 +124,7 @@ class Flower {
   }
 
   drawStem({ from, to, ctrl }: FlowerParams["stem"]) {
+    this.ctx.strokeStyle = this.palette[1];
     this.ctx.beginPath();
     this.ctx.moveTo(from.x, from.y);
     this.ctx.quadraticCurveTo(ctrl.x, ctrl.y, to.x, to.y);
@@ -225,6 +231,8 @@ class Flower {
 
   drawLeave({ position, angle, size, thickness }: LeaveParams) {
     this.ctx.save();
+    this.ctx.strokeStyle = this.palette[1];
+    this.ctx.fillStyle = this.palette[1];
     this.ctx.translate(position.x, position.y);
     this.ctx.rotate(angle);
 
@@ -243,12 +251,14 @@ class Flower {
     };
     this.ctx.quadraticCurveTo(ctrl2.x, ctrl2.y, 0, 0);
 
-    this.ctx.stroke();
+    this.ctx.fill();
 
     this.ctx.restore();
   }
 
   drawBranch({ position, angle, size, side }: BanchParams) {
+    this.ctx.strokeStyle = this.palette[1];
+    this.ctx.fillStyle = this.palette[1];
     this.ctx.save();
     this.ctx.translate(position.x, position.y);
     this.ctx.rotate(angle);
@@ -272,7 +282,7 @@ class Flower {
 
     this.ctx.save();
     this.ctx.translate(position.x, position.y);
-    this.ctx.fillStyle = "white";
+    this.ctx.fillStyle = this.palette[4];
 
     for (let i = 0; i < params.petalsCount; i++) {
       const angle = i * inc;
@@ -290,13 +300,12 @@ class Flower {
       this.ctx.quadraticCurveTo(ctrl2.x, ctrl2.y, baseB.x, baseB.y);
       this.ctx.lineTo(0, 0);
       this.ctx.fill();
-      this.ctx.stroke();
     }
 
+    this.ctx.fillStyle = this.palette[3];
     this.ctx.beginPath();
     this.ctx.arc(0, 0, base, 0, 2 * Math.PI);
     this.ctx.fill();
-    this.ctx.stroke();
 
     this.ctx.restore();
   }
@@ -474,7 +483,10 @@ export class App {
   }
 
   drawFlower() {
-    this.ctx.clearRect(0, 0, this.canvasEl.width, this.canvasEl.height);
+    const palette = randomArrayEntry(palettes);
+
+    this.ctx.fillStyle = palette[0];
+    this.ctx.fillRect(0, 0, this.canvasEl.width, this.canvasEl.height);
 
     const height = this.canvasEl.height * params.size;
 
@@ -495,6 +507,7 @@ export class App {
 
     new Flower({
       ctx: this.ctx,
+      palette: palette,
       height: height,
       stem: {
         from: {
