@@ -1,49 +1,17 @@
-import { Pane } from "tweakpane";
+import { Pane, FolderApi } from "tweakpane";
 import { Bezier } from "bezier-js";
 import { map } from "math-toolbox";
 import eases from "eases";
 import palettes from "nice-color-palettes";
 
-const randomArrayEntry = (array: any[]) =>
-  array[Math.floor(Math.random() * array.length)];
-
-type Vector2D = {
-  x: number;
-  y: number;
-};
-
-type QuadraticBezier = {
-  from: Vector2D;
-  to: Vector2D;
-  ctrl: Vector2D;
-};
-
-type NodeType = "branches" | "leaves";
-
-type NodeParams = {
-  position: Vector2D;
-  progress: number;
-  angle: number;
-  size: number;
-};
-
-interface LeaveParams extends NodeParams {
-  thickness: number;
-}
-
-interface BanchParams extends NodeParams {
-  side: "left" | "right";
-}
-
-type FlowerParams = {
-  ctx: CanvasRenderingContext2D;
-  height: number;
-  stem: QuadraticBezier;
-  nodes: {
-    count: number;
-    type: NodeType;
-  };
-};
+import {
+  NodeBranch,
+  FlowerParams,
+  NodeLeave,
+  Node,
+  NodeType,
+  Vector2D,
+} from "./types";
 
 function drawCrossHair(ctx: CanvasRenderingContext2D, x: number, y: number) {
   const size = 5;
@@ -65,7 +33,7 @@ const params = {
   stemBend: -0.26,
   stemCurve: 0.29,
   //
-  nodesType: "leaves",
+  nodesType: "leaves" as NodeType,
   subdivisions: 7,
   nodesSize: 0.25,
   nodesSizeEase: "quadIn",
@@ -91,22 +59,23 @@ function rotate2D({ x, y }: Vector2D, angle: number): Vector2D {
 
 const MIN_SIZE_MULT = 0.1;
 
-function computeNodeSizeMultiplier(p: number) {
-  if (p < params.nodesSizeModPos) {
-    return eases[params.nodesSizeEase](
-      map(p, 0, params.nodesSizeModPos, MIN_SIZE_MULT, 1)
-    );
+function computeNodeSizeMultiplier(
+  p: number,
+  pMod: number,
+  ease: (p: number) => number
+) {
+  if (p < pMod) {
+    return ease(map(p, 0, pMod, MIN_SIZE_MULT, 1));
   }
 
-  return eases[params.nodesSizeEase](
-    map(p, params.nodesSizeModPos, 1, 1, MIN_SIZE_MULT)
-  );
+  return ease(map(p, pMod, 1, 1, MIN_SIZE_MULT));
 }
 
 class Flower {
   ctx: CanvasRenderingContext2D;
   stemBezier: Bezier;
   height: number;
+  palette: string[];
 
   constructor(params: FlowerParams) {
     this.ctx = params.ctx;
@@ -120,7 +89,15 @@ class Flower {
 
     this.drawStem(params.stem);
     this.drawNodes(params.nodes);
-    this.drawFlower(params.stem.to);
+
+    if (params.flower) {
+      this.drawFlower({
+        position: params.stem.to,
+        petalsCount: params.flower.petalsCount,
+        petalsSize: params.flower.petalsSize,
+        petalsShape: params.flower.petalsShape,
+      });
+    }
   }
 
   drawStem({ from, to, ctrl }: FlowerParams["stem"]) {
@@ -146,54 +123,65 @@ class Flower {
   }
 
   drawNodes(nodes: FlowerParams["nodes"]) {
-    if (params.subdivisions === 1) {
+    if (nodes.count === 1) {
       this.drawNode({
-        p: params.nodesProgressFrom,
+        p: nodes.from,
+        size: nodes.size,
         sizeMultiplier: 1,
         type: nodes.type,
+        thickness: nodes.thickness,
+        angle: nodes.angle,
+        shape: nodes.shape,
       });
-    } else if (params.subdivisions > 1) {
-      const inc = 1 / params.subdivisions;
-
-      const from = params.nodesProgressFrom;
-      const to = params.nodesProgressTo;
+    } else if (nodes.count > 1) {
+      const inc = 1 / nodes.count;
 
       for (let progress = 0; progress <= 1; progress += inc) {
-        const sizeMultiplier = computeNodeSizeMultiplier(progress);
+        const sizeMultiplier = computeNodeSizeMultiplier(
+          progress,
+          nodes.sizeModifierProgress,
+          nodes.sizeModifierEase
+        );
 
         this.drawNode({
-          p: map(progress, 0, 1, from, to),
-          sizeMultiplier,
+          p: map(progress, 0, 1, nodes.from, nodes.to),
+          size: nodes.size,
+          sizeMultiplier: sizeMultiplier,
           type: nodes.type,
+          thickness: nodes.thickness,
+          angle: nodes.angle,
+          shape: nodes.shape,
         });
       }
     }
   }
 
-  drawNode({
-    p,
-    type,
-    sizeMultiplier,
-  }: {
+  drawNode(node: {
     p: number;
     type: NodeType;
+    size: number;
     sizeMultiplier: number;
+    angle: number;
+    thickness?: number;
+    shape?: number;
   }) {
-    const { x, y } = this.stemBezier.get(p);
+    console.log(node);
 
-    const normal = this.stemBezier.normal(p);
-    const angle = Math.atan2(normal.y, normal.x) - Math.PI / 2;
+    const { x, y } = this.stemBezier.get(node.p);
 
-    const size = sizeMultiplier * params.nodesSize * this.height;
+    const normal = this.stemBezier.normal(node.p);
+    const baseAngle = Math.atan2(normal.y, normal.x) - Math.PI / 2;
 
-    const nodeParams: NodeParams = {
+    const size = node.sizeMultiplier * node.size * this.height;
+
+    const nodeParams: Node = {
       position: { x, y },
-      progress: p,
-      angle: angle + params.nodesAngle,
+      progress: node.p,
+      angle: baseAngle + node.angle,
       size: size,
     };
 
-    switch (type) {
+    switch (node.type) {
       case "branches":
         // Draw left side branch
         this.drawBranch({
@@ -204,32 +192,35 @@ class Flower {
         // Drawn right side branch
         this.drawBranch({
           ...nodeParams,
-          // angle: angle + Math.PI - (Math.PI + params.nodesAngle),
           side: "right",
         });
 
         break;
       case "leaves":
-        const thickness = this.height * params.leavesThickness * sizeMultiplier;
+        if (!node.thickness || !node.shape) return;
+
+        const thickness = this.height * node.thickness * node.sizeMultiplier;
 
         // Draw left side leave
         this.drawLeave({
           ...nodeParams,
-          thickness,
+          thickness: thickness,
+          shape: node.shape,
         });
 
         // Drawn right side leave
         this.drawLeave({
           ...nodeParams,
-          angle: angle + Math.PI - (Math.PI + params.nodesAngle),
+          angle: baseAngle + Math.PI - (Math.PI + node.angle),
           thickness: thickness,
+          shape: node.shape,
         });
 
         break;
     }
   }
 
-  drawLeave({ position, angle, size, thickness }: LeaveParams) {
+  drawLeave({ position, angle, size, thickness, shape }: NodeLeave) {
     this.ctx.save();
     this.ctx.strokeStyle = this.palette[1];
     this.ctx.fillStyle = this.palette[1];
@@ -240,13 +231,13 @@ class Flower {
     this.ctx.moveTo(0, 0);
 
     const ctrl1 = {
-      x: -size * params.leavesShape,
+      x: -size * shape,
       y: thickness / 2,
     };
     this.ctx.quadraticCurveTo(ctrl1.x, ctrl1.y, -size, 0);
 
     const ctrl2 = {
-      x: -size * params.leavesShape,
+      x: -size * shape,
       y: -thickness / 2,
     };
     this.ctx.quadraticCurveTo(ctrl2.x, ctrl2.y, 0, 0);
@@ -256,7 +247,7 @@ class Flower {
     this.ctx.restore();
   }
 
-  drawBranch({ position, angle, size, side }: BanchParams) {
+  drawBranch({ position, angle, size, side }: NodeBranch) {
     this.ctx.strokeStyle = this.palette[1];
     this.ctx.fillStyle = this.palette[1];
     this.ctx.save();
@@ -275,16 +266,21 @@ class Flower {
     this.ctx.restore();
   }
 
-  drawFlower(position: Vector2D) {
-    const inc = (Math.PI * 2) / params.petalsCount;
-    const size = this.height * params.petalsSize;
-    const base = size * params.petalsShape;
+  drawFlower(flower: {
+    position: Vector2D;
+    petalsCount: number;
+    petalsSize: number;
+    petalsShape: number;
+  }) {
+    const inc = (Math.PI * 2) / flower.petalsCount;
+    const size = this.height * flower.petalsSize;
+    const base = size * flower.petalsShape;
 
     this.ctx.save();
-    this.ctx.translate(position.x, position.y);
+    this.ctx.translate(flower.position.x, flower.position.y);
     this.ctx.fillStyle = this.palette[4];
 
-    for (let i = 0; i < params.petalsCount; i++) {
+    for (let i = 0; i < flower.petalsCount; i++) {
       const angle = i * inc;
 
       const baseA = rotate2D({ x: -base, y: 0 }, angle);
@@ -314,7 +310,7 @@ class Flower {
 export class App {
   canvasEl!: HTMLCanvasElement;
   ctx!: CanvasRenderingContext2D;
-  pane = new Pane();
+  pane = new Pane() as FolderApi;
 
   constructor() {
     this.initCanvas();
@@ -483,7 +479,10 @@ export class App {
   }
 
   drawFlower() {
-    const palette = randomArrayEntry(palettes);
+    // const paletteIndex = Math.floor(Math.random() * palettes.length);
+    const paletteIndex = 11;
+    const palette = palettes[paletteIndex];
+    console.log(`Palette ID ${paletteIndex}`, palette);
 
     this.ctx.fillStyle = palette[0];
     this.ctx.fillRect(0, 0, this.canvasEl.width, this.canvasEl.height);
@@ -526,6 +525,19 @@ export class App {
       nodes: {
         type: params.nodesType,
         count: params.subdivisions,
+        from: params.nodesProgressFrom,
+        to: params.nodesProgressTo,
+        size: params.nodesSize,
+        sizeModifierProgress: params.nodesSizeModPos,
+        sizeModifierEase: eases[params.nodesSizeEase] as (t: number) => number,
+        thickness: params.leavesThickness,
+        angle: params.nodesAngle,
+        shape: params.leavesShape,
+      },
+      flower: {
+        petalsCount: params.petalsCount,
+        petalsSize: params.petalsSize,
+        petalsShape: params.petalsShape,
       },
     });
   }
