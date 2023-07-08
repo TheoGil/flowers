@@ -12,13 +12,19 @@ import {
   NodeType,
   Vector2D,
 } from "./types";
+import params from "./params";
 
-function drawCrossHair(ctx: CanvasRenderingContext2D, x: number, y: number) {
+function drawCrossHair(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  color = "red"
+) {
   const size = 5;
   const halfSize = size / 2;
   ctx.save();
   ctx.beginPath();
-  ctx.strokeStyle = "red";
+  ctx.strokeStyle = color;
   ctx.moveTo(x - halfSize, y - halfSize);
   ctx.lineTo(x + halfSize, y + halfSize);
   ctx.moveTo(x + halfSize, y - halfSize);
@@ -26,29 +32,6 @@ function drawCrossHair(ctx: CanvasRenderingContext2D, x: number, y: number) {
   ctx.stroke();
   ctx.restore();
 }
-
-const params = {
-  size: 0.5,
-  //
-  stemBend: -0.26,
-  stemCurve: 0.29,
-  //
-  nodesType: "leaves" as NodeType,
-  subdivisions: 7,
-  nodesSize: 0.25,
-  nodesSizeEase: "quadIn",
-  nodesSizeModPos: 1,
-  nodesProgressFrom: 0.17,
-  nodesProgressTo: 0.74,
-  nodesAngle: 1.972,
-  //
-  leavesShape: 0.5,
-  leavesThickness: 0.14,
-  //
-  petalsCount: 9,
-  petalsSize: 0.16,
-  petalsShape: 0.21,
-};
 
 function rotate2D({ x, y }: Vector2D, angle: number): Vector2D {
   return {
@@ -106,20 +89,6 @@ class Flower {
     this.ctx.moveTo(from.x, from.y);
     this.ctx.quadraticCurveTo(ctrl.x, ctrl.y, to.x, to.y);
     this.ctx.stroke();
-
-    // this.ctx.save();
-    // this.ctx.strokeStyle = "rgba(255, 0, 0, 0.5)";
-    // this.ctx.setLineDash([2]);
-    // this.ctx.beginPath();
-    // this.ctx.moveTo(from.x, from.y);
-    // this.ctx.lineTo(ctrl.x, ctrl.y);
-    // this.ctx.lineTo(to.x, to.y);
-    // this.ctx.stroke();
-    // this.ctx.setLineDash([]);
-    // this.ctx.restore();
-    // drawCrossHair(this.ctx, from.x, from.y);
-    // drawCrossHair(this.ctx, to.x, to.y);
-    // drawCrossHair(this.ctx, ctrl.x, ctrl.y);
   }
 
   drawNodes(nodes: FlowerParams["nodes"]) {
@@ -165,33 +134,34 @@ class Flower {
     thickness?: number;
     shape?: number;
   }) {
-    console.log(node);
-
     const { x, y } = this.stemBezier.get(node.p);
 
-    const normal = this.stemBezier.normal(node.p);
-    const baseAngle = Math.atan2(normal.y, normal.x) - Math.PI / 2;
+    // const baseAngle = Math.atan2(normal.y, normal.x) + node.angle;
 
     const size = node.sizeMultiplier * node.size * this.height;
 
-    const nodeParams: Node = {
-      position: { x, y },
-      progress: node.p,
-      angle: baseAngle + node.angle,
-      size: size,
-    };
+    const normalVector = this.stemBezier.normal(node.p);
+    const normalAngle = Math.atan2(normalVector.y, normalVector.x);
 
     switch (node.type) {
       case "branches":
-        // Draw left side branch
+        const branchParams = {
+          angle: normalAngle + node.angle,
+          position: { x, y },
+          progress: node.p,
+          size: size,
+          side: "left",
+        };
+
+        // right side
         this.drawBranch({
-          ...nodeParams,
+          ...branchParams,
           side: "left",
         });
 
-        // Drawn right side branch
+        // left side
         this.drawBranch({
-          ...nodeParams,
+          ...branchParams,
           side: "right",
         });
 
@@ -201,19 +171,24 @@ class Flower {
 
         const thickness = this.height * node.thickness * node.sizeMultiplier;
 
-        // Draw left side leave
-        this.drawLeave({
-          ...nodeParams,
-          thickness: thickness,
+        const leavesParams = {
+          position: { x, y },
+          progress: node.p,
           shape: node.shape,
+          size: size,
+          thickness: thickness,
+        };
+
+        // right side
+        this.drawLeave({
+          ...leavesParams,
+          angle: normalAngle + node.angle,
         });
 
-        // Drawn right side leave
+        // left side
         this.drawLeave({
-          ...nodeParams,
-          angle: baseAngle + Math.PI - (Math.PI + node.angle),
-          thickness: thickness,
-          shape: node.shape,
+          ...leavesParams,
+          angle: normalAngle - Math.PI - node.angle,
         });
 
         break;
@@ -230,17 +205,8 @@ class Flower {
     this.ctx.beginPath();
     this.ctx.moveTo(0, 0);
 
-    const ctrl1 = {
-      x: -size * shape,
-      y: thickness / 2,
-    };
-    this.ctx.quadraticCurveTo(ctrl1.x, ctrl1.y, -size, 0);
-
-    const ctrl2 = {
-      x: -size * shape,
-      y: -thickness / 2,
-    };
-    this.ctx.quadraticCurveTo(ctrl2.x, ctrl2.y, 0, 0);
+    this.ctx.quadraticCurveTo(size * shape, thickness / 2, size, 0);
+    this.ctx.quadraticCurveTo(size * shape, -thickness / 2, 0, 0);
 
     this.ctx.fill();
 
@@ -254,15 +220,12 @@ class Flower {
     this.ctx.translate(position.x, position.y);
     this.ctx.rotate(angle);
 
+    const x = side === "right" ? -size : size;
+
     this.ctx.beginPath();
     this.ctx.moveTo(0, 0);
-
-    const x = side === "left" ? -size : size;
-
     this.ctx.quadraticCurveTo(x, 0, x, -size);
-
     this.ctx.stroke();
-
     this.ctx.restore();
   }
 
@@ -384,8 +347,8 @@ export class App {
 
     nodesFolder.addInput(params, "nodesAngle", {
       label: "angle",
-      min: 0.75,
-      max: 2.39,
+      min: -Math.PI / 2,
+      max: Math.PI / 2,
     });
 
     nodesFolder.addInput(params, "nodesSize", {
