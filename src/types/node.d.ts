@@ -14,6 +14,7 @@ interface NodeLeave extends Node {
 
 interface NodeBranch extends Node {
   side: "left" | "right";
+  sizeMultiplier: number;
 }
 
 export { NodeType, Node, NodeLeave, NodeBranch };

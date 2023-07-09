@@ -138,8 +138,6 @@ class Flower {
 
     // const baseAngle = Math.atan2(normal.y, normal.x) + node.angle;
 
-    const size = node.sizeMultiplier * node.size * this.height;
-
     const normalVector = this.stemBezier.normal(node.p);
     const normalAngle = Math.atan2(normalVector.y, normalVector.x);
 
@@ -149,7 +147,8 @@ class Flower {
           angle: normalAngle + node.angle,
           position: { x, y },
           progress: node.p,
-          size: size,
+          size: node.size,
+          sizeMultiplier: node.sizeMultiplier,
           side: "left",
         };
 
@@ -175,7 +174,7 @@ class Flower {
           position: { x, y },
           progress: node.p,
           shape: node.shape,
-          size: size,
+          size: node.sizeMultiplier * node.size * this.height,
           thickness: thickness,
         };
 
@@ -213,19 +212,35 @@ class Flower {
     this.ctx.restore();
   }
 
-  drawBranch({ position, angle, size, side }: NodeBranch) {
+  drawBranch({ position, angle, size, sizeMultiplier, side }: NodeBranch) {
     this.ctx.strokeStyle = this.palette[1];
     this.ctx.fillStyle = this.palette[1];
     this.ctx.save();
     this.ctx.translate(position.x, position.y);
     this.ctx.rotate(angle);
 
-    const x = side === "right" ? -size : size;
+    const newSize = size * this.height * sizeMultiplier;
 
+    // draw branch
+    const x = side === "right" ? -newSize : newSize;
     this.ctx.beginPath();
     this.ctx.moveTo(0, 0);
-    this.ctx.quadraticCurveTo(x, 0, x, -size);
+    this.ctx.quadraticCurveTo(x, 0, x, -newSize);
     this.ctx.stroke();
+
+    console.log("size", newSize);
+
+    // draw flower
+    this.drawFlower({
+      position: {
+        x: x,
+        y: -newSize,
+      },
+      petalsCount: 10,
+      petalsSize: 0.05 * sizeMultiplier,
+      petalsShape: 0.2 * sizeMultiplier,
+    });
+
     this.ctx.restore();
   }
 
