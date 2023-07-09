@@ -1,20 +1,21 @@
-type NodeType = "branches" | "leaves";
+export type NodeType = "branch" | "leave";
 
-type Node = {
-  position: Vector2D;
+export type NodeSide = "left" | "right";
+
+export type NodeSettings = {
   progress: number;
-  angle: number;
+  type: NodeType;
   size: number;
+  angle: number;
+  side: NodeSide;
 };
 
-interface NodeLeave extends Node {
+export interface NodeLeaveSettings extends NodeSettings {
+  type: "leave";
   thickness: number;
   shape: number;
 }
 
-interface NodeBranch extends Node {
-  side: "left" | "right";
-  sizeMultiplier: number;
+function isLeave(node: NodeSettings): node is NodeLeaveSettings {
+  return node.type === "leave";
 }
-
-export { NodeType, Node, NodeLeave, NodeBranch };
