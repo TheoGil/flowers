@@ -1,11 +1,12 @@
 import { map } from "math-toolbox";
 import eases from "eases";
 import palettes from "nice-color-palettes";
+import { fitAndPosition } from "object-fit-math";
 
 import params from "./params";
 import { Plant } from "./Plant";
 import { initDebug } from "./debug";
-import { NodeLeaveSettings, NodeSettings } from "./types";
+import { NodeSettings, Vector2D } from "./types";
 
 const MIN_SIZE_MULT = 0.5;
 
@@ -24,14 +25,21 @@ function computeNodeSizeMultiplier(
 export class App {
   canvasEl!: HTMLCanvasElement;
   ctx!: CanvasRenderingContext2D;
+  points: Vector2D[] = [];
+  palette: string[] = [];
 
   constructor() {
     this.initCanvas();
     this.setCanvasSize();
-    this.drawPlant();
+    this.generateRandomPointsWithinLogo();
+    this.randomizePalette();
+
+    // this.drawSVG();
+    this.drawDebug();
 
     initDebug(() => {
-      this.drawPlant();
+      // this.drawSVG();
+      this.drawDebug();
     });
   }
 
@@ -45,21 +53,79 @@ export class App {
     this.canvasEl.height = window.innerHeight;
   }
 
-  drawPlant() {
+  randomizePalette() {
     // const paletteIndex = Math.floor(Math.random() * palettes.length);
     const paletteIndex = 11;
-    const palette = palettes[paletteIndex];
-    console.log(`Palette ID ${paletteIndex}`, palette);
+    this.palette = palettes[paletteIndex];
+    console.log(`Palette ID ${paletteIndex}`, this.palette);
+  }
 
-    this.ctx.fillStyle = palette[0];
+  generateRandomPointsWithinLogo() {
+    this.points = [];
+
+    // Matches the original SVG viewbox definition
+    const svgSize = {
+      width: 100,
+      height: 100,
+    };
+
+    // EPIC logo path
+    const path = new Path2D(
+      "M88 37.8 69.075 26.5V4L12 37.8v45L31.025 94 50.05 82.8 31.025 71.5V49L50.05 60.3 69.075 49v22.5L50.05 82.8 69.075 94 88 82.8V47.71z"
+    );
+
+    const contain = fitAndPosition(
+      {
+        width: window.innerWidth,
+        height: window.innerHeight,
+      },
+      svgSize,
+      "contain",
+      "50%",
+      "50%"
+    );
+
+    const scale = Math.max(
+      contain.width / svgSize.width,
+      contain.height / svgSize.height
+    );
+
+    this.ctx.save();
+    for (let i = 0; i < params.count; i++) {
+      const x = Math.random() * svgSize.width;
+      const y = Math.random() * svgSize.height;
+      if (this.ctx.isPointInPath(path, x, y)) {
+        this.points.push({
+          x: contain.x + x * scale,
+          y: contain.y + y * scale,
+        });
+      }
+    }
+    this.ctx.restore();
+  }
+
+  drawSVG() {
+    this.ctx.fillStyle = this.palette[0];
     this.ctx.fillRect(0, 0, this.canvasEl.width, this.canvasEl.height);
 
-    const height = this.canvasEl.height * params.size;
+    for (let i = 0; i < this.points.length; i++) {
+      const origin = this.points[i];
+      this.drawPlant(origin);
+    }
+  }
 
-    const origin = {
+  drawDebug() {
+    this.ctx.fillStyle = this.palette[0];
+    this.ctx.fillRect(0, 0, this.canvasEl.width, this.canvasEl.height);
+
+    this.drawPlant({
       x: window.innerWidth / 2,
-      y: window.innerHeight / 2 + height / 2,
-    };
+      y: window.innerHeight / 2 - params.size,
+    });
+  }
+
+  drawPlant(origin: Vector2D) {
+    const height = this.canvasEl.height * params.size;
 
     // Horizontal offset between base and top of stem is relative to its height
     const stemBend = height * params.stemBend;
@@ -115,42 +181,42 @@ export class App {
         // });
 
         // LEAVE RIGHT
-        // nodes.push({
-        //   progress: progress,
-        //   type: "leave",
-        //   thickness: size * params.leavesThickness,
-        //   shape: params.leavesShape,
-        //   side: "right",
-        //   size: size,
-        //   angle: params.nodesAngle,
-        // });
-
-        // LEAVE LEFT
-        // nodes.push({
-        //   progress: progress,
-        //   type: "leave",
-        //   thickness: size * params.leavesThickness,
-        //   shape: params.leavesShape,
-        //   side: "left",
-        //   size: size,
-        //   angle: params.nodesAngle,
-        // });
-
-        // BERRY LEFT
         nodes.push({
           progress: progress,
-          type: "berry",
+          type: "leave",
+          thickness: size * params.leavesThickness,
+          shape: params.leavesShape,
           side: "right",
           size: size,
           angle: params.nodesAngle,
-          lineWidth: 1,
         });
+
+        // LEAVE LEFT
+        nodes.push({
+          progress: progress,
+          type: "leave",
+          thickness: size * params.leavesThickness,
+          shape: params.leavesShape,
+          side: "left",
+          size: size,
+          angle: params.nodesAngle,
+        });
+
+        // BERRY LEFT
+        // nodes.push({
+        //   progress: progress,
+        //   type: "berry",
+        //   side: "left",
+        //   size: size,
+        //   angle: params.nodesAngle,
+        //   lineWidth: 1,
+        // });
       }
     }
 
     new Plant({
       ctx: this.ctx,
-      palette: palette,
+      palette: this.palette,
       height: height,
       stem: {
         from: {
