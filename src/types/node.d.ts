@@ -2,7 +2,7 @@ export type NodeType = "branch" | "leave";
 
 export type NodeSide = "left" | "right";
 
-export type NodeSettings = {
+export type NodeCommonSettings = {
   progress: number;
   type: NodeType;
   size: number;
@@ -10,12 +10,14 @@ export type NodeSettings = {
   side: NodeSide;
 };
 
-export interface NodeLeaveSettings extends NodeSettings {
+export interface NodeBranchSettings extends NodeCommonSettings {
+  type: "branch";
+}
+
+export interface NodeLeaveSettings extends NodeCommonSettings {
   type: "leave";
   thickness: number;
   shape: number;
 }
 
-function isLeave(node: NodeSettings): node is NodeLeaveSettings {
-  return node.type === "leave";
-}
+export type NodeSettings = NodeBranchSettings | NodeLeaveSettings;

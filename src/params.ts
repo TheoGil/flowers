@@ -2,8 +2,8 @@ import { NodeType } from "./types";
 
 export default {
   size: 0.5,
-  stemBend: -0.26,
-  stemCurve: 0.29,
+  stemBend: 0,
+  stemCurve: 0.5,
   nodesType: "branches" as NodeType,
   subdivisions: 7,
   nodesSize: 0.25,

@@ -1,17 +1,12 @@
 import { Bezier } from "bezier-js";
 import { rotate2D } from "./utils";
 import {
-  NodeLeaveSettings,
   NodeSettings,
   NodeSide,
   QuadraticBezier,
   Vector2D,
   PlantSettings,
 } from "./types";
-
-function isLeave(node: NodeSettings): node is NodeLeaveSettings {
-  return node.type === "leave";
-}
 
 export class Plant {
   ctx: CanvasRenderingContext2D;
@@ -73,10 +68,6 @@ export class Plant {
 
         break;
       case "leave":
-        if (!isLeave(node)) {
-          return;
-        }
-
         const angle =
           node.side === "left"
             ? normalAngle - Math.PI - node.angle
