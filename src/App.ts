@@ -5,8 +5,9 @@ import palettes from "nice-color-palettes";
 import params from "./params";
 import { Plant } from "./Plant";
 import { initDebug } from "./debug";
+import { NodeLeaveSettings, NodeSettings } from "./types";
 
-const MIN_SIZE_MULT = 0.1;
+const MIN_SIZE_MULT = 0.5;
 
 function computeNodeSizeMultiplier(
   p: number,
@@ -74,11 +75,68 @@ export class App {
       t: number
     ) => number;
 
-    const sizeMultiplier = computeNodeSizeMultiplier(
-      0.5,
-      params.nodesSizeModPos,
-      sizeModifierEase
-    );
+    const nodes: (NodeSettings | NodeLeaveSettings)[] = [];
+
+    if (params.subdivisions) {
+      const step = 1 / params.subdivisions;
+      for (let i = 0; i < params.subdivisions; i++) {
+        const progress = map(
+          (i + 1) * step,
+          0,
+          1,
+          params.nodesProgressFrom,
+          params.nodesProgressTo
+        );
+
+        const sizeMultiplier = computeNodeSizeMultiplier(
+          progress,
+          params.nodesSizeModPos,
+          sizeModifierEase
+        );
+
+        const size = params.nodesSize * sizeMultiplier * height;
+
+        // BRANCH RIGHT
+        // nodes.push({
+        //   progress: progress,
+        //   type: "branch",
+        //   size: size,
+        //   angle: params.nodesAngle,
+        //   side: "right",
+        // });
+
+        // BRANCH LEFT
+        // nodes.push({
+        //   progress: progress,
+        //   type: "branch",
+        //   size: size,
+        //   angle: params.nodesAngle,
+        //   side: "left",
+        // });
+
+        // LEAVE RIGHT
+        // nodes.push({
+        //   progress: progress,
+        //   type: "leave",
+        //   thickness: size * params.leavesThickness,
+        //   shape: params.leavesShape,
+        //   side: "right",
+        //   size: size,
+        //   angle: params.nodesAngle,
+        // });
+
+        // LEAVE LEFT
+        // nodes.push({
+        //   progress: progress,
+        //   type: "leave",
+        //   thickness: size * params.leavesThickness,
+        //   shape: params.leavesShape,
+        //   side: "left",
+        //   size: size,
+        //   angle: params.nodesAngle,
+        // });
+      }
+    }
 
     new Plant({
       ctx: this.ctx,
@@ -98,22 +156,7 @@ export class App {
           y: ctrlY,
         },
       },
-      nodes: [
-        {
-          progress: 0.5,
-          type: "branch",
-          size: params.nodesSize * sizeMultiplier * height,
-          angle: params.nodesAngle,
-          side: "right",
-        },
-        {
-          progress: 0.5,
-          type: "branch",
-          size: params.nodesSize * sizeMultiplier * height,
-          angle: params.nodesAngle,
-          side: "left",
-        },
-      ],
+      nodes: nodes,
     });
   }
 }
