@@ -7,6 +7,7 @@ import {
   Vector2D,
   PlantSettings,
 } from "./types";
+import { drawCircle } from "./utils/canvas";
 
 export class Plant {
   ctx: CanvasRenderingContext2D;
@@ -82,6 +83,25 @@ export class Plant {
         });
 
         break;
+      case "berry":
+        const position =
+          node.side === "left"
+            ? {
+                x: x + normalVector.x * (-node.size - node.lineWidth / 2),
+                y: y + normalVector.y * (-node.size - node.lineWidth / 2),
+              }
+            : {
+                x: x + normalVector.x * (node.size + node.lineWidth / 2),
+                y: y + normalVector.y * (node.size + node.lineWidth / 2),
+              };
+
+        this.drawBerry({
+          position: position,
+          size: node.size,
+          lineWidth: node.lineWidth,
+        });
+
+        break;
     }
   }
 
@@ -137,6 +157,18 @@ export class Plant {
     this.ctx.quadraticCurveTo(x, 0, x, -branch.size);
     this.ctx.stroke();
 
+    this.ctx.restore();
+  }
+
+  drawBerry(berry: { position: Vector2D; size: number; lineWidth: number }) {
+    this.ctx.save();
+    this.ctx.beginPath();
+    drawCircle(this.ctx, berry.position.x, berry.position.y, berry.size);
+    this.ctx.fillStyle = this.palette[2];
+    this.ctx.fill();
+    this.ctx.lineWidth = berry.lineWidth;
+    this.ctx.strokeStyle = this.palette[1];
+    this.ctx.stroke();
     this.ctx.restore();
   }
 

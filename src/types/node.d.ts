@@ -1,4 +1,4 @@
-export type NodeType = "branch" | "leave";
+export type NodeType = "branch" | "leave" | "berry";
 
 export type NodeSide = "left" | "right";
 
@@ -20,4 +20,12 @@ export interface NodeLeaveSettings extends NodeCommonSettings {
   shape: number;
 }
 
-export type NodeSettings = NodeBranchSettings | NodeLeaveSettings;
+export interface NodeBerrySettings extends NodeCommonSettings {
+  type: "berry";
+  lineWidth: number;
+}
+
+export type NodeSettings =
+  | NodeBranchSettings
+  | NodeLeaveSettings
+  | NodeBerrySettings;

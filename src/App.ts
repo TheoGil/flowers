@@ -75,7 +75,7 @@ export class App {
       t: number
     ) => number;
 
-    const nodes: (NodeSettings | NodeLeaveSettings)[] = [];
+    const nodes: NodeSettings[] = [];
 
     if (params.subdivisions) {
       const step = 1 / params.subdivisions;
@@ -135,6 +135,16 @@ export class App {
         //   size: size,
         //   angle: params.nodesAngle,
         // });
+
+        // BERRY LEFT
+        nodes.push({
+          progress: progress,
+          type: "berry",
+          side: "right",
+          size: size,
+          angle: params.nodesAngle,
+          lineWidth: 1,
+        });
       }
     }
 
