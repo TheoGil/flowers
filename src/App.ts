@@ -31,7 +31,6 @@ export class App {
   constructor() {
     this.initCanvas();
     this.setCanvasSize();
-    this.generateRandomPointsWithinLogo();
     this.randomizePalette();
 
     // this.drawSVG();
@@ -105,6 +104,8 @@ export class App {
   }
 
   drawSVG() {
+    this.generateRandomPointsWithinLogo();
+
     this.ctx.fillStyle = this.palette[0];
     this.ctx.fillRect(0, 0, this.canvasEl.width, this.canvasEl.height);
 
@@ -120,97 +121,106 @@ export class App {
 
     this.drawPlant({
       x: window.innerWidth / 2,
-      y: window.innerHeight / 2 - params.size,
+      y: window.innerHeight - window.innerHeight / 4,
     });
   }
 
   drawPlant(origin: Vector2D) {
-    const height = this.canvasEl.height * params.size;
+    const size = params.size / 100;
+    const height = this.canvasEl.height * size;
 
     // Horizontal offset between base and top of stem is relative to its height
-    const stemBend = height * params.stemBend;
+    const stemBend = height * params.stem.bend;
     const stemTopX = origin.x + stemBend;
     const stemTopY = origin.y - height;
 
     // Control point vertical position is relative to stem height
-    const ctrlYOffset = height * params.stemCurve;
+    const ctrlYOffset = height * params.stem.curve;
     const ctrlX = origin.x;
     const ctrlY = stemTopY + ctrlYOffset;
 
-    const sizeModifierEase = eases[params.nodesSizeEase] as (
+    const sizeModifierEase = eases[params.nodes.sizeEase] as (
       t: number
     ) => number;
 
     const nodes: NodeSettings[] = [];
 
-    if (params.subdivisions) {
-      const step = 1 / params.subdivisions;
-      for (let i = 0; i < params.subdivisions; i++) {
+    if (params.nodes.count) {
+      const step = 1 / params.nodes.count;
+      for (let i = 0; i < params.nodes.count; i++) {
         const progress = map(
           (i + 1) * step,
           0,
           1,
-          params.nodesProgressFrom,
-          params.nodesProgressTo
+          params.nodes.progressFrom,
+          params.nodes.progressTo
         );
 
         const sizeMultiplier = computeNodeSizeMultiplier(
           progress,
-          params.nodesSizeModPos,
+          params.nodes.sizeModPos,
           sizeModifierEase
         );
 
-        const size = params.nodesSize * sizeMultiplier * height;
+        const size = params.nodes.size * sizeMultiplier * height;
 
-        // BRANCH RIGHT
-        // nodes.push({
-        //   progress: progress,
-        //   type: "branch",
-        //   size: size,
-        //   angle: params.nodesAngle,
-        //   side: "right",
-        // });
+        switch (params.nodes.type) {
+          case "branch":
+            // BRANCH RIGHT
+            nodes.push({
+              progress: progress,
+              type: "branch",
+              size: size,
+              angle: 0,
+              side: "right",
+            });
 
-        // BRANCH LEFT
-        // nodes.push({
-        //   progress: progress,
-        //   type: "branch",
-        //   size: size,
-        //   angle: params.nodesAngle,
-        //   side: "left",
-        // });
+            // BRANCH LEFT
+            nodes.push({
+              progress: progress,
+              type: "branch",
+              size: size,
+              angle: 0,
+              side: "left",
+            });
+            break;
+          case "leave":
+            // LEAVE RIGHT
+            nodes.push({
+              progress: progress,
+              type: "leave",
+              thickness: size * params.leaves.thickness,
+              shape: params.leaves.shape,
+              side: "right",
+              size: size,
+              angle: params.nodes.angle,
+            });
 
-        // LEAVE RIGHT
-        nodes.push({
-          progress: progress,
-          type: "leave",
-          thickness: size * params.leavesThickness,
-          shape: params.leavesShape,
-          side: "right",
-          size: size,
-          angle: params.nodesAngle,
-        });
-
-        // LEAVE LEFT
-        nodes.push({
-          progress: progress,
-          type: "leave",
-          thickness: size * params.leavesThickness,
-          shape: params.leavesShape,
-          side: "left",
-          size: size,
-          angle: params.nodesAngle,
-        });
-
-        // BERRY LEFT
-        // nodes.push({
-        //   progress: progress,
-        //   type: "berry",
-        //   side: "left",
-        //   size: size,
-        //   angle: params.nodesAngle,
-        //   lineWidth: 1,
-        // });
+            // LEAVE LEFT
+            nodes.push({
+              progress: progress,
+              type: "leave",
+              thickness: size * params.leaves.thickness,
+              shape: params.leaves.shape,
+              side: "left",
+              size: size,
+              angle: params.nodes.angle,
+            });
+            break;
+          case "berry":
+            // BERRY LEFT
+            nodes.push({
+              progress: progress,
+              type: "berry",
+              side: "left",
+              size: size,
+              angle: 0,
+              lineWidth: 1,
+            });
+            break;
+          default:
+            break;
+        }
       }
     }
 

@@ -1,84 +1,92 @@
 import params from "./params";
 import { Pane, FolderApi } from "tweakpane";
+import * as EssentialsPlugin from "@tweakpane/plugin-essentials";
 
 export function initDebug(onChangeCallback: () => void) {
   const pane = new Pane() as FolderApi;
 
+  pane.registerPlugin(EssentialsPlugin);
+
+  pane
+    .addButton({
+      title: "Re-generate",
+    })
+    .on("click", onChangeCallback);
+
   const folder = pane
     .addFolder({
-      title: "params",
+      title: "Params",
     })
     .on("change", onChangeCallback);
 
-  const globalFolder = folder.addFolder({
-    title: "global",
-  });
-
-  globalFolder.addInput(params, "size", {
-    label: "size",
+  folder.addInput(params, "size", {
+    label: "Size",
     min: 0,
-    max: 1,
+    max: 100,
+    step: 1,
   });
 
   const stemFolder = folder.addFolder({
-    title: "stem",
+    title: "Stem",
   });
 
-  stemFolder.addInput(params, "stemBend", {
-    label: "bend",
+  stemFolder.addInput(params.stem, "bend", {
+    label: "Bend",
     min: -0.7,
     max: 0.7,
   });
-  stemFolder.addInput(params, "stemCurve", {
-    label: "curve",
+
+  stemFolder.addInput(params.stem, "curve", {
+    label: "Curve",
     min: -0.5,
     max: 0.5,
   });
 
   const nodesFolder = folder.addFolder({
-    title: "nodes",
+    title: "Nodes",
   });
 
-  nodesFolder.addInput(params, "nodesType", {
-    label: "types",
+  nodesFolder.addInput(params.nodes, "type", {
+    label: "Type",
     options: {
-      leaves: "leaves",
-      branches: "branches",
+      leave: "leave",
+      branch: "branch",
+      berry: "berry",
     },
   });
 
-  nodesFolder.addInput(params, "subdivisions", {
-    label: "subdivisions",
+  nodesFolder.addInput(params.nodes, "count", {
+    label: "Count",
     min: 0,
     max: 30,
     step: 1,
   });
 
-  nodesFolder.addInput(params, "nodesProgressFrom", {
-    label: "from",
-    min: 0,
-    max: 1,
-  });
-
-  nodesFolder.addInput(params, "nodesProgressTo", {
-    label: "to",
-    min: 0,
-    max: 1,
-  });
-
-  nodesFolder.addInput(params, "nodesAngle", {
-    label: "angle",
-    min: -Math.PI / 2,
-    max: Math.PI / 2,
-  });
-
-  nodesFolder.addInput(params, "nodesSize", {
+  nodesFolder.addInput(params.nodes, "size", {
     label: "size",
     min: 0,
     max: 1,
   });
 
-  nodesFolder.addInput(params, "nodesSizeEase", {
+  nodesFolder.addInput(params.nodes, "progressFrom", {
+    label: "from",
+    min: 0,
+    max: 1,
+  });
+
+  nodesFolder.addInput(params.nodes, "progressTo", {
+    label: "to",
+    min: 0,
+    max: 1,
+  });
+
+  nodesFolder.addInput(params.nodes, "angle", {
+    label: "angle",
+    min: -Math.PI / 2,
+    max: Math.PI / 2,
+  });
+
+  nodesFolder.addInput(params.nodes, "sizeEase", {
     label: "length mod easing",
     options: {
       circInOut: "circInOut",
@@ -106,23 +114,23 @@ export function initDebug(onChangeCallback: () => void) {
     },
   });
 
-  nodesFolder.addInput(params, "nodesSizeModPos", {
+  nodesFolder.addInput(params.nodes, "sizeModPos", {
     label: "size mod pos",
     min: 0,
     max: 1,
   });
 
   const leavesShape = folder.addFolder({
-    title: "leaves shape",
+    title: "leaves",
   });
 
-  leavesShape.addInput(params, "leavesShape", {
+  leavesShape.addInput(params.leaves, "shape", {
     label: "shape",
     min: 0,
     max: 1,
   });
 
-  leavesShape.addInput(params, "leavesThickness", {
+  leavesShape.addInput(params.leaves, "thickness", {
     label: "thickness",
     min: 0,
     max: 0.5,
@@ -132,20 +140,20 @@ export function initDebug(onChangeCallback: () => void) {
     title: "petals",
   });
 
-  petalsFolder.addInput(params, "petalsCount", {
+  petalsFolder.addInput(params.flower.petals, "count", {
     label: "count",
     min: 2,
     max: 20,
     step: 1,
   });
 
-  petalsFolder.addInput(params, "petalsSize", {
+  petalsFolder.addInput(params.flower.petals, "size", {
     label: "size",
     min: 0,
     max: 1,
   });
 
-  petalsFolder.addInput(params, "petalsShape", {
+  petalsFolder.addInput(params.flower.petals, "shape", {
     label: "shape",
     min: 0,
     max: 1,

@@ -31,9 +31,9 @@ export class Plant {
     // if (params.flower) {
     //   this.drawFlower({
     //     position: params.stem.to,
-    //     petalsCount: params.flower.petalsCount,
-    //     petalsSize: params.flower.petalsSize,
-    //     petalsShape: params.flower.petalsShape,
+    //     petalsCount: params.flower.petals.count,
+    //     petalsSize: params.flower.petals.size,
+    //     petalsShape: params.flower.petals.shape,
     //   });
     // }
   }
