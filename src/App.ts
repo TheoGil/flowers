@@ -146,27 +146,34 @@ export class App {
     const nodes: NodeSettings[] = [];
 
     if (params.nodes.count) {
-      const step = 1 / params.nodes.count;
-      for (let i = 0; i < params.nodes.count; i++) {
-        const progress = map(
-          (i + 1) * step,
-          0,
-          1,
-          params.nodes.progressFrom,
-          params.nodes.progressTo
-        );
+      const { count, progressFrom, progressTo, sizeModPos } = params.nodes;
 
+      // Normalized distance between nodes
+      const step = 1 / count;
+
+      // Make sure that nodes are evenly distributed
+      // First one starts at progressFrom, last at progressTo
+      // Note that if count > 1, it represents the divisions count, not the nodes count.
+      const forLoopLength = count === 1 ? count - 1 : count;
+
+      // Default node size, without being affected by nodeSizeMultiplier
+      // Only need to compute that once
+      const rootSize = params.nodes.size * height;
+
+      for (let i = 0; i <= forLoopLength; i++) {
+        const progress = map(i * step, 0, 1, progressFrom, progressTo);
+
+        // Alters the size of the nodes along the stem
         const sizeMultiplier = computeNodeSizeMultiplier(
           progress,
-          params.nodes.sizeModPos,
+          sizeModPos,
           sizeModifierEase
         );
 
-        const size = params.nodes.size * sizeMultiplier * height;
+        const size = rootSize * sizeMultiplier;
 
         switch (params.nodes.type) {
           case "branch":
-            // BRANCH RIGHT
             nodes.push({
               progress: progress,
               type: "branch",
@@ -175,7 +182,6 @@ export class App {
               side: "right",
             });
 
-            // BRANCH LEFT
             nodes.push({
               progress: progress,
               type: "branch",
@@ -185,7 +191,6 @@ export class App {
             });
             break;
           case "leave":
-            // LEAVE RIGHT
             nodes.push({
               progress: progress,
               type: "leave",
@@ -196,7 +201,6 @@ export class App {
               angle: params.nodes.angle,
             });
 
-            // LEAVE LEFT
             nodes.push({
               progress: progress,
               type: "leave",
@@ -208,7 +212,6 @@ export class App {
             });
             break;
           case "berry":
-            // BERRY LEFT
             nodes.push({
               progress: progress,
               type: "berry",
@@ -243,14 +246,14 @@ export class App {
         },
       },
       nodes: nodes,
-      flower: {
-        angle: Math.random() * Math.PI,
-        petals: {
-          count: params.flower.petals.count,
-          size: params.flower.petals.size,
-          shape: params.flower.petals.shape,
-        },
-      },
+      // flower: {
+      //   angle: Math.random() * Math.PI,
+      //   petals: {
+      //     count: params.flower.petals.count,
+      //     size: params.flower.petals.size,
+      //     shape: params.flower.petals.shape,
+      //   },
+      // },
     });
   }
 }
