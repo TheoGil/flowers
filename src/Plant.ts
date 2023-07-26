@@ -211,6 +211,7 @@ export class Plant {
       this.ctx.quadraticCurveTo(ctrl2.x, ctrl2.y, baseB.x, baseB.y);
       this.ctx.lineTo(0, 0);
       this.ctx.fill();
+      this.ctx.stroke();
     }
 
     this.ctx.fillStyle = this.palette[3];
