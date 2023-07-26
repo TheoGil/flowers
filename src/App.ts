@@ -11,15 +11,27 @@ import { NodeSettings, Vector2D } from "./types";
 const MIN_SIZE_MULT = 0.5;
 
 function computeNodeSizeMultiplier(
-  p: number,
-  pMod: number,
+  progress: number,
+  progressMidPoint: number,
+  progressMin: number,
+  progressMax: number,
   ease: (p: number) => number
 ) {
-  if (p < pMod) {
-    return ease(map(p, 0, pMod, MIN_SIZE_MULT, 1));
+  const relativeMidPoint = map(
+    progressMidPoint,
+    0,
+    1,
+    progressMin,
+    params.nodes.progressTo
+  );
+
+  // Node is in "increasing" phase
+  if (progress < relativeMidPoint) {
+    return ease(map(progress, progressMin, relativeMidPoint, MIN_SIZE_MULT, 1));
   }
 
-  return ease(map(p, pMod, 1, 1, MIN_SIZE_MULT));
+  // Node is in "decreasing phase"
+  return ease(map(progress, relativeMidPoint, progressMax, 1, MIN_SIZE_MULT));
 }
 
 export class App {
@@ -167,6 +179,8 @@ export class App {
         const sizeMultiplier = computeNodeSizeMultiplier(
           progress,
           sizeModPos,
+          progressFrom,
+          progressTo,
           sizeModifierEase
         );
 
