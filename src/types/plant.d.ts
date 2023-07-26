@@ -6,4 +6,12 @@ export type PlantSettings = {
   palette: string[];
   stem: QuadraticBezier;
   nodes: (NodeSettings | NodeLeaveSettings)[];
+  flower?: {
+    angle: number;
+    petals: {
+      count: number;
+      size: number;
+      shape: number;
+    };
+  };
 };

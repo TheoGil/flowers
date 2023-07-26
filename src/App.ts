@@ -243,6 +243,14 @@ export class App {
         },
       },
       nodes: nodes,
+      flower: {
+        angle: Math.random() * Math.PI,
+        petals: {
+          count: params.flower.petals.count,
+          size: params.flower.petals.size,
+          shape: params.flower.petals.shape,
+        },
+      },
     });
   }
 }

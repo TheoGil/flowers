@@ -28,14 +28,15 @@ export class Plant {
     this.drawStem(params.stem);
     this.drawNodes(params.nodes);
 
-    // if (params.flower) {
-    //   this.drawFlower({
-    //     position: params.stem.to,
-    //     petalsCount: params.flower.petals.count,
-    //     petalsSize: params.flower.petals.size,
-    //     petalsShape: params.flower.petals.shape,
-    //   });
-    // }
+    if (params.flower) {
+      this.drawFlower({
+        position: params.stem.to,
+        petalsCount: params.flower.petals.count,
+        petalsSize: params.flower.petals.size,
+        petalsShape: params.flower.petals.shape,
+        angle: params.flower.angle,
+      });
+    }
   }
 
   drawStem({ from, to, ctrl }: QuadraticBezier) {
@@ -183,6 +184,7 @@ export class Plant {
     petalsCount: number;
     petalsSize: number;
     petalsShape: number;
+    angle: number;
   }) {
     const inc = (Math.PI * 2) / flower.petalsCount;
     const size = this.height * flower.petalsSize;
@@ -190,6 +192,7 @@ export class Plant {
 
     this.ctx.save();
     this.ctx.translate(flower.position.x, flower.position.y);
+    this.ctx.rotate(flower.angle);
     this.ctx.fillStyle = this.palette[4];
 
     for (let i = 0; i < flower.petalsCount; i++) {
