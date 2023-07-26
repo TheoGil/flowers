@@ -154,8 +154,14 @@ export class Plant {
     const x = branch.side === "right" ? branch.size : -branch.size;
     this.ctx.beginPath();
     this.ctx.moveTo(0, 0);
-    this.ctx.quadraticCurveTo(x, 0, x, -branch.size);
+    this.ctx.quadraticCurveTo(x, 0, x, -branch.size / 1.25);
     this.ctx.stroke();
+
+    this.drawBerry({
+      position: { x, y: -branch.size / 1.25 },
+      size: branch.size / 10,
+      lineWidth: 1,
+    });
 
     this.ctx.restore();
   }
