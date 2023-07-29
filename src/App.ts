@@ -1,6 +1,14 @@
 import palettes from "nice-color-palettes";
 import { fitAndPosition } from "object-fit-math";
 
+// TODO: perlin noise to modulate stem horizontal offset value (more natural, less chaotic)
+// TODO: perlin noise to modulate plant size
+// TODO: perlin noise to create islands of blooming flowers
+// TODO: draw plants from back to front to avoid depth issues
+// TODO: combine multiple color palettes in same render
+// TODO: apply slight randomness to every single node on angle and size
+// TODO: randomise nodes type (maybe also use perlin noise?) and arrangement (symetrical, assymetrical, skip node...)
+
 import params from "./params";
 import { Plant } from "./Plant";
 import { initDebug } from "./debug";
@@ -22,12 +30,12 @@ export class App {
     this.setCanvasSize();
     this.randomizePalette();
 
-    // this.drawSVG();
-    this.drawDebug();
+    this.drawSVG();
+    // this.drawDebug();
 
     initDebug(() => {
-      // this.drawSVG();
-      this.drawDebug();
+      this.drawSVG();
+      // this.drawDebug();
     });
   }
 

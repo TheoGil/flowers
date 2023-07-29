@@ -1,5 +1,5 @@
 import eases from "eases";
-import { map } from "math-toolbox";
+import { map, randomInt, randomFloat } from "math-toolbox";
 
 import params from "../params";
 import { NodeSettings } from "../types";
@@ -13,6 +13,10 @@ function computeNodeSizeMultiplier(
   progressMax: number,
   ease: (p: number) => number
 ) {
+  if (progressMin === progressMax) {
+    return 1;
+  }
+
   const relativeMidPoint = map(
     progressMidPoint,
     0,
@@ -30,6 +34,45 @@ function computeNodeSizeMultiplier(
   return ease(map(progress, relativeMidPoint, progressMax, 1, MIN_SIZE_MULT));
 }
 
+const COUNT_MIN = 1;
+const COUNT_MAX = 5;
+const PROGRESS_FROM_MIN = 0;
+const PROGRESS_FROM_MAX = 0.25;
+// Kind of magic number, adjust to taste until visually looks good
+// Used to avoid nodes overlapping with flower petals (if any)
+// Higher value = nodes ends further from flower
+const PETALS_PROGRESS_MODIFIER = 1.5;
+const NODE_SIZE_MIN = 0.04;
+const NODE_SIZE_MAX = 0.25;
+
+const computeProgressFrom = ({
+  flowerSettings,
+  nodesCount,
+}: {
+  flowerSettings: any;
+  nodesCount: number;
+}) => {
+  // If no flower and only one node, place single node at very end of stem
+  if (nodesCount === 1 && !flowerSettings) {
+    return 1;
+  }
+
+  return randomFloat(PROGRESS_FROM_MIN, PROGRESS_FROM_MAX);
+};
+
+const computeProgressTo = ({ flowerSettings }: { flowerSettings: any }) => {
+  // If plant has flower, adjust nodes progressFrom so they don't overlap with petals
+  if (flowerSettings) {
+    return 1 - flowerSettings.petals.size * PETALS_PROGRESS_MODIFIER;
+  }
+
+  return 1;
+};
+
+const getRandomNodeRootSize = (plantSize: number) => {
+  return randomFloat(NODE_SIZE_MIN, NODE_SIZE_MAX) * plantSize;
+};
+
 const getRandomNodesSettings = ({
   flowerSettings,
   plantSize,
@@ -44,14 +87,17 @@ const getRandomNodesSettings = ({
   const nodesSettings: NodeSettings[] = [];
 
   if (params.nodes.count) {
-    const { count, progressFrom, sizeModPos } = params.nodes;
-    let { progressTo } = params.nodes;
+    const count = randomInt(COUNT_MIN, COUNT_MAX);
+    const { sizeModPos } = params.nodes;
 
-    // If plant has flower, make sure that nodes do not overlap with petals.
-    // Adjust progressTo accordingly.
-    progressTo = flowerSettings
-      ? Math.min(progressTo, 1 - flowerSettings.petals.size * 1.5)
-      : progressTo;
+    let progressFrom = computeProgressFrom({
+      flowerSettings: flowerSettings,
+      nodesCount: count,
+    });
+
+    let progressTo = computeProgressTo({
+      flowerSettings: flowerSettings,
+    });
 
     // Normalized distance between nodes
     const step = 1 / count;
@@ -63,7 +109,7 @@ const getRandomNodesSettings = ({
 
     // Default node size, without being affected by nodeSizeMultiplier
     // Only need to compute that once
-    const rootSize = params.nodes.size * plantSize;
+    const nodeRootSize = getRandomNodeRootSize(plantSize);
 
     for (let i = 0; i <= forLoopLength; i++) {
       const progress = map(i * step, 0, 1, progressFrom, progressTo);
@@ -77,7 +123,7 @@ const getRandomNodesSettings = ({
         sizeModifierEase
       );
 
-      const size = rootSize * sizeMultiplier;
+      const size = nodeRootSize * sizeMultiplier;
 
       switch (params.nodes.type) {
         case "branch":
