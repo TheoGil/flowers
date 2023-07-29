@@ -1,38 +1,15 @@
-import { map } from "math-toolbox";
-import eases from "eases";
 import palettes from "nice-color-palettes";
 import { fitAndPosition } from "object-fit-math";
 
 import params from "./params";
 import { Plant } from "./Plant";
 import { initDebug } from "./debug";
-import { NodeSettings, Vector2D } from "./types";
-
-const MIN_SIZE_MULT = 0.5;
-
-function computeNodeSizeMultiplier(
-  progress: number,
-  progressMidPoint: number,
-  progressMin: number,
-  progressMax: number,
-  ease: (p: number) => number
-) {
-  const relativeMidPoint = map(
-    progressMidPoint,
-    0,
-    1,
-    progressMin,
-    params.nodes.progressTo
-  );
-
-  // Node is in "increasing" phase
-  if (progress < relativeMidPoint) {
-    return ease(map(progress, progressMin, relativeMidPoint, MIN_SIZE_MULT, 1));
-  }
-
-  // Node is in "decreasing phase"
-  return ease(map(progress, relativeMidPoint, progressMax, 1, MIN_SIZE_MULT));
-}
+import { Vector2D } from "./types";
+import {
+  getRandomStemSettings,
+  getRandomFlowerSettings,
+  getRandomNodesSettings,
+} from "./generators";
 
 export class App {
   canvasEl!: HTMLCanvasElement;
@@ -141,133 +118,23 @@ export class App {
     const size = params.size / 100;
     const height = this.canvasEl.height * size;
 
-    // Horizontal offset between base and top of stem is relative to its height
-    const stemBend = height * params.stem.bend;
-    const stemTopX = origin.x + stemBend;
-    const stemTopY = origin.y - height;
-
-    // Control point vertical position is relative to stem height
-    const ctrlYOffset = height * params.stem.curve;
-    const ctrlX = origin.x;
-    const ctrlY = stemTopY + ctrlYOffset;
-
-    const sizeModifierEase = eases[params.nodes.sizeEase] as (
-      t: number
-    ) => number;
-
-    const nodes: NodeSettings[] = [];
-
-    if (params.nodes.count) {
-      const { count, progressFrom, progressTo, sizeModPos } = params.nodes;
-
-      // Normalized distance between nodes
-      const step = 1 / count;
-
-      // Make sure that nodes are evenly distributed
-      // First one starts at progressFrom, last at progressTo
-      // Note that if count > 1, it represents the divisions count, not the nodes count.
-      const forLoopLength = count === 1 ? count - 1 : count;
-
-      // Default node size, without being affected by nodeSizeMultiplier
-      // Only need to compute that once
-      const rootSize = params.nodes.size * height;
-
-      for (let i = 0; i <= forLoopLength; i++) {
-        const progress = map(i * step, 0, 1, progressFrom, progressTo);
-
-        // Alters the size of the nodes along the stem
-        const sizeMultiplier = computeNodeSizeMultiplier(
-          progress,
-          sizeModPos,
-          progressFrom,
-          progressTo,
-          sizeModifierEase
-        );
-
-        const size = rootSize * sizeMultiplier;
-
-        switch (params.nodes.type) {
-          case "branch":
-            nodes.push({
-              progress: progress,
-              type: "branch",
-              size: size,
-              angle: 0,
-              side: "right",
-            });
-
-            nodes.push({
-              progress: progress,
-              type: "branch",
-              size: size,
-              angle: 0,
-              side: "left",
-            });
-            break;
-          case "leave":
-            nodes.push({
-              progress: progress,
-              type: "leave",
-              thickness: size * params.leaves.thickness,
-              shape: params.leaves.shape,
-              side: "right",
-              size: size,
-              angle: params.nodes.angle,
-            });
-
-            nodes.push({
-              progress: progress,
-              type: "leave",
-              thickness: size * params.leaves.thickness,
-              shape: params.leaves.shape,
-              side: "left",
-              size: size,
-              angle: params.nodes.angle,
-            });
-            break;
-          case "berry":
-            nodes.push({
-              progress: progress,
-              type: "berry",
-              side: "left",
-              size: size,
-              angle: 0,
-              lineWidth: 1,
-            });
-            break;
-          default:
-            break;
-        }
-      }
-    }
+    const stemSettings = getRandomStemSettings({
+      origin: origin,
+      plantSize: height,
+    });
+    const flowerSettings = getRandomFlowerSettings();
+    const nodesSettings = getRandomNodesSettings({
+      flowerSettings: flowerSettings,
+      plantSize: height,
+    });
 
     new Plant({
       ctx: this.ctx,
       palette: this.palette,
       height: height,
-      stem: {
-        from: {
-          x: origin.x,
-          y: origin.y,
-        },
-        to: {
-          x: stemTopX,
-          y: stemTopY,
-        },
-        ctrl: {
-          x: ctrlX,
-          y: ctrlY,
-        },
-      },
-      nodes: nodes,
-      // flower: {
-      //   angle: Math.random() * Math.PI,
-      //   petals: {
-      //     count: params.flower.petals.count,
-      //     size: params.flower.petals.size,
-      //     shape: params.flower.petals.shape,
-      //   },
-      // },
+      stem: stemSettings,
+      nodes: nodesSettings,
+      flower: flowerSettings,
     });
   }
 }
