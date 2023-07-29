@@ -4,7 +4,6 @@ import { fitAndPosition } from "object-fit-math";
 // TODO: perlin noise to modulate stem horizontal offset value (more natural, less chaotic)
 // TODO: perlin noise to modulate plant size
 // TODO: perlin noise to create islands of blooming flowers
-// TODO: draw plants from back to front to avoid depth issues
 // TODO: combine multiple color palettes in same render
 // TODO: apply slight randomness to every single node on angle and size
 // TODO: randomise nodes type (maybe also use perlin noise?) and arrangement (symetrical, assymetrical, skip node...)
@@ -102,6 +101,7 @@ export class App {
 
   drawSVG() {
     this.generateRandomPointsWithinLogo();
+    this.points = sortPointsFromLowestToHighestY(this.points);
 
     this.ctx.fillStyle = this.palette[0];
     this.ctx.fillRect(0, 0, this.canvasEl.width, this.canvasEl.height);
@@ -146,3 +146,7 @@ export class App {
     });
   }
 }
+
+const sortPointsFromLowestToHighestY = (points: Vector2D[]) => {
+  return points.sort((a, b) => a.y - b.y);
+};
